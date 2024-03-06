@@ -12,10 +12,14 @@ import winsound
 # 安装完成以后配置环境变量，在计算机-->属性-->高级系统设置-->环境变量-->系统变量path
 import pytesseract
 
+# 所有按钮的位置坐标均以2k分辨率为基准
 Search_button = (2315, 357, 153, 28)
 # 第一个Buy按钮的位置，其余按钮坐标从上向下y坐标依次递减87
 first_Buy_buttons = (2312, 460, 153, 34)
-decrease_y = 87
+Buy_buttons_decrease_y = 87
+
+Fill_All_Items_button = (1147, 986, 250, 65)
+Complete_Trade_button = (1151, 1101, 250, 52)
 
 def ringing():
     winsound.Beep(1000, 1000)
@@ -40,25 +44,42 @@ class IO_controller:
     def rand_move_to_click(self, x, y, rand_x, rand_y):
         x = x + random.randint(-rand_x, rand_x)
         y = y + random.randint(-rand_y, rand_y)
-        self.move_to_click(x, y, 0.2)
+        self.move_to_click(x, y, 0.1 + random.random() * 0.2)
 
 
 class Dark_Game_Operation:
     def __init__(self) -> None:
         self.io = IO_controller()
+
     def Press_Search_Button(self):
         center_x = int(Search_button[0] + Search_button[2] / 2)
         center_y = int(Search_button[1] + Search_button[3] / 2)
         rand_x = int(Search_button[2] / 2)
         rand_y = int(Search_button[3] / 2)
         self.io.rand_move_to_click(center_x, center_y, rand_x, rand_y)
+
     def Press_Buy_Button(self, index):
         print('Press_Buy_Button:', index + 1)
         center_x = int(first_Buy_buttons[0] + first_Buy_buttons[2] / 2)
-        center_y = int(first_Buy_buttons[1] + first_Buy_buttons[3] / 2 + decrease_y * index)
+        center_y = int(first_Buy_buttons[1] + first_Buy_buttons[3] / 2 + Buy_buttons_decrease_y * index)
         rand_x = int(first_Buy_buttons[2] / 2)
         rand_y = int(first_Buy_buttons[3] / 2)
         self.io.rand_move_to_click(center_x, center_y, rand_x, rand_y)
+
+    def press_Fill_All_Items_Button(self):
+        center_x = int(Fill_All_Items_button[0] + Fill_All_Items_button[2] / 2)
+        center_y = int(Fill_All_Items_button[1] + Fill_All_Items_button[3] / 2)
+        rand_x = int(Fill_All_Items_button[2] / 2)
+        rand_y = int(Fill_All_Items_button[3] / 2)
+        self.io.rand_move_to_click(center_x, center_y, rand_x, rand_y)
+
+    def press_Complete_Trade_Button(self):
+        center_x = int(Complete_Trade_button[0] + Complete_Trade_button[2] / 2)
+        center_y = int(Complete_Trade_button[1] + Complete_Trade_button[3] / 2)
+        rand_x = int(Complete_Trade_button[2] / 2)
+        rand_y = int(Complete_Trade_button[3] / 2)
+        self.io.rand_move_to_click(center_x, center_y, rand_x, rand_y)
+
     def Get_Prices(self):
         # 截取左上坐标(1986,441)开始，宽度93，高度850的画面
         # 截取的画面保存到当前目录下的screen.png，region参数是一个元组，元组的第一个元素是截图的左上角的x坐标，第二个元素是截图的左上角的y坐标，第三个元素是截图的宽度，第四个元素是截图的高度
@@ -79,6 +100,7 @@ class Dark_Game_Operation:
             return result
         except:
             return -1
+        
     def Get_Random_Attribute(self):
         pyautogui.screenshot('Random_Attribute_screen.png', region=(1495, 441, 112, 850))
         img = cv2.imread('Random_Attribute_screen.png')
@@ -96,8 +118,6 @@ class Dark_Game_Operation:
     
 
 
-
-
 class Dark_and_Darker_Appliaction:
     def __init__(self) -> None:
         self.game = Dark_Game_Operation()
@@ -109,7 +129,12 @@ class Dark_and_Darker_Appliaction:
         """
         global pause_flag
         pause_flag = False
-        while not pause_flag:
+        while True:
+            if pause_flag:
+                print('已暂停...输入任意键继续...')
+                input()
+                pause_flag = False
+                
             time.sleep(1)
             # 获取当前窗口名称
             window_name = pyautogui.getActiveWindow().title
@@ -134,6 +159,10 @@ class Dark_and_Darker_Appliaction:
                             self.game.Press_Buy_Button(min_index)
                             pause_flag = True
                             ringing()
+                            time.sleep(0.3 + random.random() * 0.2)
+                            self.game.press_Fill_All_Items_Button()
+                            time.sleep(0.1 + random.random() * 0.3)
+                            self.game.press_Complete_Trade_Button()
                             break
                         # 如果rand_attrs有大于min_rand_attrs的值
                         if max(rand_attrs) >= min_rand_attrs:
@@ -143,9 +172,13 @@ class Dark_and_Darker_Appliaction:
                                 self.game.Press_Buy_Button(rand_attrs.index(max(rand_attrs)))
                                 pause_flag = True
                                 ringing()
+                                time.sleep(0.3 + random.random() * 0.2)
+                                self.game.press_Fill_All_Items_Button()
+                                time.sleep(0.1 + random.random() * 0.3)
+                                self.game.press_Complete_Trade_Button()
                                 break
                     self.game.Press_Search_Button()
-                    time.sleep(0.5)
+                    time.sleep(0.4 + random.random() * 0.1)
     
 
 

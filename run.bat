@@ -1,2 +1,2 @@
  Net session >nul 2>&1 || powershell start-process \"%0\" -verb runas && exit
-C:/Python312/python.exe "c:/Users/Steven/Desktop/Darkauto/test_tesseract.py"
+C:/Python312/python.exe "c:/Users/Steven/Desktop/Darkauto/test_tesseract_ghub.py"

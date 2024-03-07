@@ -48,7 +48,7 @@ class LOGITECH:
     """罗技动态链接库"""
     try:
         file_path = os.path.abspath(os.path.dirname(__file__)) # 当前路径
-        dll = ctypes.CDLL(f'{file_path}/ghub_device.dll') # 打开路径文件
+        dll = ctypes.CDLL(f'{file_path}/logitech.driver.dll') # 打开路径文件
         state = (dll.device_open() == 1) # 启动, 并返回是否成功
         WAIT_TIME = 0.5 # 等待时间
         RANDOM_NUM = 0.1 # 最大时间随机数
@@ -284,7 +284,15 @@ def Dark_and_Darker_buy_ring():
 
 
 if __name__ == '__main__':
-    Mymain()
+    try:
+        root = os.path.abspath(os.path.dirname(__file__))
+        driver = ctypes.CDLL(f'{root}/logitech.driver.dll')
+        ok = driver.device_open() == 1  # 该驱动每个进程可打开一个实例
+        if not ok:
+            print('Error, GHUB or LGS driver not found')
+    except FileNotFoundError:
+        print(f'Error, DLL file not found')
+    # Mymain()
     # Dark_and_Darker_buy_ring()
             
     # 我是cuda_12.3版本，我应该安装的是torch-2.1.2

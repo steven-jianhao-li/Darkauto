@@ -21,8 +21,12 @@ Buy_buttons_decrease_y = 87
 Fill_All_Items_button = (1147, 986, 250, 65)
 Complete_Trade_button = (1151, 1101, 250, 52)
 
+Final_Price = (1383, 877, 168, 37)
+Slot_chosen = (818, 260, 225, 30)
+
 def ringing():
-    winsound.Beep(1000, 1000)
+    # winsound.Beep(1000, 100)
+    pass
 
 def OCR_image(img):
     # 将图片转换为灰度图
@@ -44,7 +48,7 @@ class IO_controller:
     def rand_move_to_click(self, x, y, rand_x, rand_y):
         x = x + random.randint(-rand_x, rand_x)
         y = y + random.randint(-rand_y, rand_y)
-        self.move_to_click(x, y, 0.1 + random.random() * 0.2)
+        self.move_to_click(x, y, 0.1 + random.random() * 0.1)
 
 
 class Dark_Game_Operation:
@@ -59,7 +63,6 @@ class Dark_Game_Operation:
         self.io.rand_move_to_click(center_x, center_y, rand_x, rand_y)
 
     def Press_Buy_Button(self, index):
-        print('Press_Buy_Button:', index + 1)
         center_x = int(first_Buy_buttons[0] + first_Buy_buttons[2] / 2)
         center_y = int(first_Buy_buttons[1] + first_Buy_buttons[3] / 2 + Buy_buttons_decrease_y * index)
         rand_x = int(first_Buy_buttons[2] / 2)
@@ -115,12 +118,63 @@ class Dark_Game_Operation:
             return result
         except:
             return -1
-    
+        
+    def Buy_Item(self, index, target_price):
+        print('Buy Item:', index + 1)
+        # 点击Buy按钮
+        self.Press_Buy_Button(index)
+        time.sleep(0.1 + random.random() * 0.1)
+        # 检测价格是否一致
+        pyautogui.screenshot('final_price.png', region=(Final_Price[0], Final_Price[1], Final_Price[2], Final_Price[3]))
+        img = cv2.imread('final_price.png')
+        final_price = OCR_image(img)
+        if str(target_price) not in final_price:
+            print('final_price:', final_price, '价格不一致')
+            time.sleep(2 + random.random() * 0.1)
+            # 键盘按下esc键
+            pyautogui.keyDown('esc')
+            time.sleep(0.05 + random.random() * 0.1)
+            pyautogui.keyUp('esc')
+            return
+        else:
+            print('final_price:', final_price, '价格一致，购买中......', end='')
+            # 点击Fill All Items按钮
+            self.press_Fill_All_Items_Button()
+            time.sleep(0.03 + random.random() * 0.07)
+            # 点击Complete Trade按钮
+            self.press_Complete_Trade_Button()
+            time.sleep(2 + random.random() * 0.1)
+            # 键盘按下esc键
+            pyautogui.keyDown('esc')
+            time.sleep(0.05 + random.random() * 0.1)
+            pyautogui.keyUp('esc')
+            print('购买完成')
 
+            
+    
+class Output:
+    def __init__(self) -> None:
+        pass
+
+    def Print_Random_Attribute_and_Prices(self, rand_attrs, prices):
+        for i in range(71):
+            print('-', end='')
+        # 用表格打印，方便观察，每个数字之间用|分隔，占位符为5个字符
+        print('\nPrices:    ', end='')
+        for price in prices:
+            print(f'|{price:5}', end='')
+        print('\nRand_Attrs:', end='')
+        for rand_attr in rand_attrs:
+            print(f'|{rand_attr:5}', end='')
+        print()
+        for i in range(71):
+            print('-', end='')
+        print()
 
 class Dark_and_Darker_Appliaction:
     def __init__(self) -> None:
         self.game = Dark_Game_Operation()
+        self.output = Output()
     def Dark_and_Darker_buy_ring(self, min_rand_attrs, max_price_target, max_price_low):
         """
         min_rand_attrs: 最小随机属性roll值
@@ -141,51 +195,62 @@ class Dark_and_Darker_Appliaction:
             # print(window_name)
             if 'Dark and Darker' in window_name:
                 print('Dark and Darker is running...')
-                while True:
-                    if 'Dark and Darker' not in pyautogui.getActiveWindow().title:
-                        print('Dark and Darker is not running...')
-                        break
-                    
-                    prices = self.game.Get_Prices()
-                    rand_attrs = self.game.Get_Random_Attribute()
-                    print("prices:", prices)
-                    print("rand_attrs:", rand_attrs)
-                    if prices != -1 and rand_attrs != -1:
-                        # 如果有价格小于等于max_price_low，点击购买按钮
-                        if min(prices) <= max_price_low:
-                            # 最小价格的位置
-                            min_index = prices.index(min(prices))
-                            # 点击购买按钮
-                            self.game.Press_Buy_Button(min_index)
-                            pause_flag = True
-                            ringing()
-                            time.sleep(0.3 + random.random() * 0.2)
-                            self.game.press_Fill_All_Items_Button()
-                            time.sleep(0.1 + random.random() * 0.3)
-                            self.game.press_Complete_Trade_Button()
+                # 检测部位是否为Ring
+                pyautogui.screenshot('slot_chosen.png', region=(Slot_chosen[0], Slot_chosen[1], Slot_chosen[2], Slot_chosen[3]))
+                img = cv2.imread('slot_chosen.png')
+                result = OCR_image(img)
+                if 'Ring' not in result:
+                    # print('Slot is not Ring. Waiting for 1s...')
+                    time.sleep(1)
+                    continue
+                else:
+                    old_prices = []
+                    old_rand_attrs = []
+                    while True:
+                        if 'Dark and Darker' not in pyautogui.getActiveWindow().title:
+                            print('Dark and Darker is not running...')
                             break
-                        # 如果rand_attrs有大于min_rand_attrs的值
-                        if max(rand_attrs) >= min_rand_attrs:
-                            # 检测它的价格是否小于max_price_target
-                            if prices[rand_attrs.index(max(rand_attrs))] <= max_price_target:
-                                # 点击购买按钮
-                                self.game.Press_Buy_Button(rand_attrs.index(max(rand_attrs)))
-                                pause_flag = True
+                        prices = self.game.Get_Prices()
+                        rand_attrs = self.game.Get_Random_Attribute()
+                        # 如果prices和rand_attrs都不为-1
+                        if prices != -1 and rand_attrs != -1:
+                            # 如果价格或者随机属性有变化，打印出来
+                            if prices != old_prices or rand_attrs != old_rand_attrs:
+                                self.output.Print_Random_Attribute_and_Prices(rand_attrs, prices)
+                            old_prices = prices
+                            old_rand_attrs = rand_attrs
+                            # 如果rand_attrs有大于min_rand_attrs的值，且价格小于max_price_target，点击购买按钮
+                            target_item_index = rand_attrs.index(max(rand_attrs))
+                            if rand_attrs[target_item_index] >= min_rand_attrs and prices[target_item_index] <= max_price_target:
+                                    ringing()
+                                    try:
+                                        self.game.Buy_Item(target_item_index, prices[target_item_index])
+                                    except Exception as e:
+                                        print(e)
+                                    pause_flag = True
+                                    break
+                            # 如果有价格小于等于max_price_low，点击购买按钮
+                            target_item_index = prices.index(min(prices))
+                            if min(prices) <= max_price_low:
                                 ringing()
-                                time.sleep(0.3 + random.random() * 0.2)
-                                self.game.press_Fill_All_Items_Button()
-                                time.sleep(0.1 + random.random() * 0.3)
-                                self.game.press_Complete_Trade_Button()
+                                try:
+                                    self.game.Buy_Item(target_item_index, prices[target_item_index])
+                                except Exception as e:
+                                    print(e)
+                                pause_flag = True
                                 break
-                    self.game.Press_Search_Button()
-                    time.sleep(0.4 + random.random() * 0.1)
+                        time.sleep(0.1 + random.random() * 0.3)
+                        self.game.Press_Search_Button()
+
     
 
 
 
 if __name__ == '__main__':
     dark_game = Dark_and_Darker_Appliaction()
-    dark_game.Dark_and_Darker_buy_ring(2, 200, 120)
+    dark_game.Dark_and_Darker_buy_ring(2, 200, 100)
     global pause_flag
     pause_flag = False
+
+
  

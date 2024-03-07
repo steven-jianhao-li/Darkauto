@@ -11,7 +11,7 @@ IO操作已用罗技驱动实现，极大降低被检测概率。
 1. Python 3
 2. Tesseract-OCR —— https://github.com/UB-Mannheim/tesseract/wiki
 3. 罗技驱动（以下两个均需安装，安装包已上传至本项目）：
-    - LGS  —— LGS_9.02.65_x64_Logitech_2.exe
+    - LGS  —— LGS_9.02.65_x64_Logitech_2.exe（超过Github要求的100M大小，可从https://pan.baidu.com/s/1VkE2FQrNEOOkW6tCOLZ-kw?pwd=yh3s下载）
     - LGhub —— lghub_WIN7_2021.3.5164.exe
 
 ## 待实现

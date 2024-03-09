@@ -24,24 +24,16 @@ Buy_buttons_decrease_y = 87
 Fill_All_Items_button = (1147, 986, 250, 65)
 Complete_Trade_button = (1151, 1101, 250, 52)
 # 静态文本位置
-Prices = (1986, 441, 93, 850)
-Random_Attribute = (1495, 441, 112, 850)
-# Final_Price = (1383, 877, 168, 37) # 这个是小字，不好识别
-Final_Price = (255, 695, 275, 69)
+Final_Price = (1383, 877, 168, 37)
 Slot_Chosen = (818, 263, 234, 30)
 Item_Name_Chosen = (106, 263, 234, 24)
 Random_Attribute_Chosen = (1895, 263, 234, 23)
-Item_Sold = (986, 177, 590, 58)
-Buy_Success = (908, 596, 744, 152)
 
-# 初始化数据
-# 当前python文件的路径
-File_Path = os.path.abspath(os.path.dirname(__file__))
 init = {
     'pause_flag': False,
     'end_flag': False,
     'buy_times': 3,
-    'LogFilePath': '{0}/log/{1}.txt'.format(File_Path, time.strftime('%Y_%m_%d %H_%M_%S', time.localtime()))
+    'LogFilePath': 'log/{}.txt'.format(time.strftime('%Y_%m_%d %H_%M_%S', time.localtime()))
 }
 
 def microsecond_sleep(sleep_time):
@@ -55,22 +47,17 @@ def microsecond_sleep(sleep_time):
     while time.perf_counter() < end_time:
         pass
 
-# log_and_print可能有多个参数输入，和print(1, 2)一样
-def log_and_print(*log_str, sep=' ', end='\n'):
+
+def log_and_print(log_str):
     """打印和记录日志
 
     :param log_str: str, 日志内容
     :return:
     """
-    # 处理一下*log_str中可能有的end = ''参数
 
-    log_str = sep.join([str(x) for x in log_str])
-    print(log_str, end=end)
-    if not os.path.exists(os.path.dirname(data['LogFilePath'])):
-        os.makedirs(os.path.dirname(data['LogFilePath']))
-    # 用utf-8编码打开文件，如果文件不存在则创建，如果文件存在则在文件末尾追加
-    with open(data['LogFilePath'], 'a', encoding='utf-8') as f:
-        f.write(log_str + end)
+    print(log_str)
+    with open(data['LogFilePath'], 'a') as f:
+        f.write(log_str + '\n')
 
 
 
@@ -78,37 +65,34 @@ def ringing():
     # winsound.Beep(1000, 100)
     pass
 
-def OCR_image(img, only_number=False):
+def OCR_image(img):
     # 将图片转换为灰度图
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     # 将图片转换为二值图，参数解释：https://blog.csdn.net/weixin_42272768/article/details/110746790
-    _, img = cv2.threshold(img, 109, 255, cv2.THRESH_BINARY)
+    _, img = cv2.threshold(img, 100, 255, cv2.THRESH_BINARY)
     # 使用tesseract识别图片中的数字
-    if only_number:
-        result = pytesseract.image_to_string(img, config=r'-c tessedit_char_whitelist=0123456789 --psm 6 --oem 3')
-    else:
-        result = pytesseract.image_to_string(img, config='--psm 6')
+    result = pytesseract.image_to_string(img, config='--psm 6')
     return result
 
 def print_tkui(strs):
     """ 打包控制台输出 """
-    log_and_print(strs)
+    print(strs)
 
 # 检测剩余购买次数
 def check_buy_times():
     """ 检测剩余购买次数 """
     if data['buy_times'] > 1:
         data['buy_times'] -= 1
-        log_and_print('buy_times已减少，当前值:', data['buy_times'])
+        print('buy_times已减少，当前值:', data['buy_times'])
     else:
         data['pause_flag'] = True
-        log_and_print('已购买足够次数，暂停...')
+        print('已购买足够次数，暂停...')
 
 class PID:
     """PID"""
     # Q: 我想让鼠标移动的速度更加平滑，所以我使用了PID控制器，我想加快移动速度，所以参数我应该如何调整？
     # A: 你可以调整P、I、D的值，P是比例，I是积分，D是微分，P是控制鼠标移动速度的，I是控制鼠标移动的平滑度的，D是控制鼠标移动的稳定性的。
-    def __init__(self, P=0.15, I=0, D=0):
+    def __init__(self, P=0.1, I=0, D=0):
         """PID"""
         self.kp = P # 比例 
         self.ki = I # 积分
@@ -146,9 +130,9 @@ class LOGITECH:
             self.WAIT_TIME = 0.5 # 等待时间
             self.MAX_RANDOM_SLEEP_TIME = 0.1 # 最大随机等待时间
             if not self.state:
-                log_and_print('错误, 未找到GHUB或LGS驱动程序')
+                print('错误, 未找到GHUB或LGS驱动程序')
         except FileNotFoundError:
-            log_and_print(f'错误, 找不到DLL文件')
+            print(f'错误, 找不到DLL文件')
 
     def mouse_down(self, code):
         """ 鼠标按下 code: 左 中 右 """
@@ -253,7 +237,7 @@ class LOGITECH:
             move_x = pid_x.pidPosition(end_x, new_x) # 经过pid计算鼠标运动量
             move_y = pid_y.pidPosition(end_y, new_y)
 
-            # log_and_print(f'x={new_x}, y={new_y}, xd={move_x}, yd={move_y}')
+            # print(f'x={new_x}, y={new_y}, xd={move_x}, yd={move_y}')
             # 如果近似重合就退出循环
             if abs(end_x - new_x) < 2 and abs(end_y - new_y) < 2:
                 return True
@@ -348,14 +332,12 @@ class Dark_Game_Operation:
     def Get_Prices(self):
         # 截取左上坐标(1986,441)开始，宽度93，高度850的画面
         # 截取的画面保存到当前目录下的screen.png，region参数是一个元组，元组的第一个元素是截图的左上角的x坐标，第二个元素是截图的左上角的y坐标，第三个元素是截图的宽度，第四个元素是截图的高度
-        img = pyautogui.screenshot(region=(Prices[0], Prices[1], Prices[2], Prices[3]))
-        # 类型转换，将screenshot返回的PIL.Image.Image转换为cv2的图像格式
-        img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
-        # 使用tesseract识别图片中的数字
+        pyautogui.screenshot('prices_screen.png', region=(1986, 441, 93, 850))
+        # 识别图片中的数字
+        img = cv2.imread('prices_screen.png')
         result = OCR_image(img)
         # 转换识别结果为数组
         result = result.split('\n')
-        print(result)
         try:
             # 清空空元素
             result = [x for x in result if x]
@@ -369,8 +351,8 @@ class Dark_Game_Operation:
             return -1
         
     def Get_Random_Attribute(self):
-        img = pyautogui.screenshot(region=(Random_Attribute[0], Random_Attribute[1], Random_Attribute[2], Random_Attribute[3]))
-        img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+        pyautogui.screenshot('Random_Attribute_screen.png', region=(1495, 441, 112, 850))
+        img = cv2.imread('Random_Attribute_screen.png')
         result = OCR_image(img)
         result = result.split('\n')
         try:
@@ -383,37 +365,17 @@ class Dark_Game_Operation:
         except:
             return -1
         
-    # 定义函数检测是否购买商品成功
-    def Check_Buy_Success(self):
-        img = pyautogui.screenshot(region=(Buy_Success[0], Buy_Success[1], Buy_Success[2], Buy_Success[3]))
-        img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
-        result = OCR_image(img)
-        # Your purchase has been completed.The item has been delivered to your inventory or storage.
-        if 'completed' in result:
-            return True
-        else:
-            return False
-
-    def Check_If_Sold(self):
-        img = pyautogui.screenshot(region=(Item_Sold[0], Item_Sold[1], Item_Sold[2], Item_Sold[3]))
-        img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
-        result = OCR_image(img)
-        if 'sold' in result:
-            return True
-        else:
-            return False
-
     def Buy_Item(self, index, target_price):
-        log_and_print('Buy Item:', index + 1)
+        print('Buy Item:', index + 1)
         # 点击Buy按钮
         self.Press_Buy_Button(index)
-        time.sleep(0.01 + random.random() * 0.02)
+        time.sleep(0.05 + random.random() * 0.05)
         # 检测价格是否一致
-        img = pyautogui.screenshot(region=(Final_Price[0], Final_Price[1], Final_Price[2], Final_Price[3]))
-        img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+        pyautogui.screenshot('final_price.png', region=(Final_Price[0], Final_Price[1], Final_Price[2], Final_Price[3]))
+        img = cv2.imread('final_price.png')
         final_price = OCR_image(img)
         if str(target_price) not in final_price:
-            log_and_print('final_price:', final_price, '价格不一致')
+            print('final_price:', final_price, '价格不一致')
             time.sleep(2 + random.random() * 0.1)
             # 键盘按下esc键
             pyautogui.keyDown('esc')
@@ -421,28 +383,20 @@ class Dark_Game_Operation:
             pyautogui.keyUp('esc')
             return
         else:
-            log_and_print('final_price:', final_price, '价格一致，购买中......', end='')
+            print('final_price:', final_price, '价格一致，购买中......', end='')
             # 点击Fill All Items按钮
             self.press_Fill_All_Items_Button()
-            time.sleep(0.01 + random.random() * 0.02)
+            time.sleep(0.01 + random.random() * 0.03)
             # 点击Complete Trade按钮
             self.press_Complete_Trade_Button()
             time.sleep(2 + random.random() * 0.1)
-            if self.Check_Buy_Success():
-                log_and_print('购买成功')
-                state = 1
-            elif self.Check_If_Sold():
-                log_and_print('物品已售出')
-                state = 0
-            else:
-                log_and_print('未知错误（即未购买成功，也未售出）')
-                state = -1
             # 键盘按下esc键
             pyautogui.keyDown('esc')
             time.sleep(0.05 + random.random() * 0.1)
             pyautogui.keyUp('esc')
+            print('购买完成')
             time.sleep(0.2 + random.random() * 0.1)
-            return state
+            return
         
     def Check_Slot(self):
         img = pyautogui.screenshot(region=(Slot_Chosen[0], Slot_Chosen[1], Slot_Chosen[2], Slot_Chosen[3]))
@@ -472,40 +426,40 @@ class Output:
 
     def Print_Random_Attribute(self, rand_attrs):
         for i in range(71):
-            log_and_print('-', end='')
-        log_and_print()
+            print('-', end='')
+        print()
         for rand_attr in rand_attrs:
-            log_and_print(rand_attr, end=' ')
-        log_and_print()
+            print(rand_attr, end=' ')
+        print()
         for i in range(71):
-            log_and_print('-', end='')
-        log_and_print()
+            print('-', end='')
+        print()
     
     def Print_Prices(self, prices):
         for i in range(71):
-            log_and_print('-', end='')
-        log_and_print()
+            print('-', end='')
+        print()
         for price in prices:
-            log_and_print(price, end=' ')
-        log_and_print()
+            print(price, end=' ')
+        print()
         for i in range(71):
-            log_and_print('-', end='')
-        log_and_print()
+            print('-', end='')
+        print()
     
     def Print_Random_Attribute_and_Prices(self, rand_attrs, prices):
         for i in range(71):
-            log_and_print('-', end='')
+            print('-', end='')
         # 用表格打印，方便观察，每个数字之间用|分隔，占位符为5个字符
-        log_and_print('\nPrices:    ', end='')
+        print('\nPrices:    ', end='')
         for price in prices:
-            log_and_print(f'|{price:5}', end='')
-        log_and_print('\nRand_Attrs:', end='')
+            print(f'|{price:5}', end='')
+        print('\nRand_Attrs:', end='')
         for rand_attr in rand_attrs:
-            log_and_print(f'|{rand_attr:5}', end='')
-        log_and_print()
+            print(f'|{rand_attr:5}', end='')
+        print()
         for i in range(71):
-            log_and_print('-', end='')
-        log_and_print()
+            print('-', end='')
+        print()
     
 
 class Dark_and_Darker_Appliaction:
@@ -513,13 +467,22 @@ class Dark_and_Darker_Appliaction:
         self.game = Dark_Game_Operation()
         self.output = Output()
         self.data = data
+
+    def Pause_or_End(self):
+        if self.data['end_flag']:
+            return 0
+        if self.data['pause_flag']:
+            print('已暂停...按下home键继续...')
+            return 1
+        return 2
+
     def Dark_and_Darker_buy_ring(self, min_rand_attrs, max_price_target, max_price_low):
         """
         min_rand_attrs: 最小随机属性roll值
         max_price_target: 满足最小随机属性roll值的最大预算
         max_price_low: 无需满足最小随机属性roll值的最大预算
         """
-        log_and_print('正在运行Buy Ring程序...等待Dark and Darker启动...')
+        print('正在运行Buy Ring程序...等待Dark and Darker启动...')
         print_flag = True
         while True:
             time.sleep(1)
@@ -527,31 +490,29 @@ class Dark_and_Darker_Appliaction:
                 return
             if data['pause_flag']:
                 if print_flag:
-                    log_and_print('已暂停...按下page up键继续...')
+                    print('已暂停...按下home键继续...')
                     print_flag = False
                 continue
             print_flag = True
 
             if 'Dark and Darker' in pyautogui.getActiveWindow().title:
-                log_and_print('Dark and Darker is running...')
+                print('Dark and Darker is running...')
                 # 检测部位是否为Ring
                 if 'Ring' not in self.game.Check_Slot():
-                    # log_and_print('Slot is not Ring. Waiting for 1s...')
+                    # print('Slot is not Ring. Waiting for 1s...')
                     time.sleep(1)
                     continue
                 else:
-                    self.game.Press_Search_Button()
-                    time.sleep(1 + random.random() * 0.5)
                     old_prices = []
                     old_rand_attrs = []
                     while True:
                         if data['end_flag']:
                             return
                         if data['pause_flag']:
-                            log_and_print('已暂停...按下page up键继续...')
+                            print('已暂停...按下home键继续...')
                             break
                         if 'Dark and Darker' not in pyautogui.getActiveWindow().title:
-                            log_and_print('Dark and Darker is not running...')
+                            print('Dark and Darker is not running...')
                             break
                         prices = self.game.Get_Prices()
                         rand_attrs = self.game.Get_Random_Attribute()
@@ -567,11 +528,10 @@ class Dark_and_Darker_Appliaction:
                             if rand_attrs[target_item_index] >= min_rand_attrs and prices[target_item_index] <= max_price_target:
                                     ringing()
                                     try:
-                                        state = self.game.Buy_Item(target_item_index, prices[target_item_index])
-                                        if state == 1:
-                                            log_and_print('***已购买Ring，价格：[{0}]，随机属性：[{1}]***'.format(prices[target_item_index], rand_attrs[target_item_index]))
+                                        self.game.Buy_Item(target_item_index, prices[target_item_index])
+                                        print('***已购买Ring，价格：[{0}]，随机属性：[{1}]***'.format(prices[target_item_index], rand_attrs[target_item_index]))
                                     except Exception as e:
-                                        log_and_print(e)
+                                        print(e)
                                     check_buy_times()
                                     self.game.Press_Search_Button()
                                     break
@@ -580,11 +540,9 @@ class Dark_and_Darker_Appliaction:
                             if min(prices) <= max_price_low:
                                 ringing()
                                 try:
-                                    state = self.game.Buy_Item(target_item_index, prices[target_item_index])
-                                    if state == 1:
-                                        log_and_print('***已购买Ring，价格：[{0}]，随机属性：[{1}]***'.format(prices[target_item_index], rand_attrs[target_item_index]))
+                                    self.game.Buy_Item(target_item_index, prices[target_item_index])
                                 except Exception as e:
-                                    log_and_print(e)
+                                    print(e)
                                 check_buy_times()
                                 self.game.Press_Search_Button()
                                 break
@@ -592,7 +550,7 @@ class Dark_and_Darker_Appliaction:
                         self.game.Press_Search_Button()
     
     def Dark_and_Darker_buy_Surgicalkit(self, max_price_low):
-        log_and_print('正在运行Buy Surgical kit程序...等待Dark and Darker启动...')
+        print('正在运行Buy Surgical kit程序...等待Dark and Darker启动...')
         print_flag = True
         while True:
             time.sleep(1)
@@ -600,19 +558,17 @@ class Dark_and_Darker_Appliaction:
                 return
             if data['pause_flag']:
                 if print_flag:
-                    log_and_print('已暂停...按下page up键继续...')
+                    print('已暂停...按下home键继续...')
                     print_flag = False
                 continue
             print_flag = True
             if 'Dark and Darker' in pyautogui.getActiveWindow().title:
-                log_and_print('Dark and Darker is running...')
+                print('Dark and Darker is running...')
                 # 检测物品名称是否为Surgical kit
                 if 'Surgical Kit' not in self.game.Check_Item_Name():
                     time.sleep(1)
                     continue
                 else:
-                    self.game.Press_Search_Button()
-                    time.sleep(1 + random.random() * 0.5)
                     old_prices = []
                     while True:
                         if data['end_flag']:
@@ -620,7 +576,7 @@ class Dark_and_Darker_Appliaction:
                         if data['pause_flag']:
                             break
                         if 'Dark and Darker' not in pyautogui.getActiveWindow().title:
-                            log_and_print('Dark and Darker is not running...')
+                            print('Dark and Darker is not running...')
                             break
                         prices = self.game.Get_Prices()
                         # 如果prices不为-1，即识别成功
@@ -634,11 +590,10 @@ class Dark_and_Darker_Appliaction:
                             if min(prices) <= max_price_low:
                                 ringing()
                                 try:
-                                    state = self.game.Buy_Item(target_item_index, prices[target_item_index])
-                                    if state == 1:
-                                        log_and_print('***已购买Surgical kit，价格：[', prices[target_item_index], ']***')
+                                    self.game.Buy_Item(target_item_index, prices[target_item_index])
+                                    print('***已购买Surgical kit，价格：[', prices[target_item_index], ']***')
                                 except Exception as e:
-                                    log_and_print(e)
+                                    print(e)
                                 check_buy_times()
                                 self.game.Press_Search_Button()
                                 break
@@ -647,45 +602,34 @@ class Dark_and_Darker_Appliaction:
 
 
 
-def Listen_KeyBoard(data_input):
+def Listen_KeyBoard(data):
     def KeyBoard_CallBack(key):
         if key == pynput.keyboard.Key.end:  # 结束程序 End 键
             winsound.Beep(400, 200)
-            data_input['end_flag'] = True
+            data['end_flag'] = True
             return False
-        elif key == pynput.keyboard.Key.page_up:  # 开始程序 PgUp 键
+        elif key == pynput.keyboard.Key.home:  # 开始程序 Home 键
             winsound.Beep(600, 200)
-            data_input['pause_flag'] = False
+            data['pause_flag'] = False
             return False
-        elif key == pynput.keyboard.Key.home:  # 暂停程序 Home 键
+        elif key == pynput.keyboard.Key.page_up:  # 暂停程序 PgUp 键
             winsound.Beep(700, 200)
-            data_input['pause_flag'] = True
+            data['pause_flag'] = True
             return True
         elif key == pynput.keyboard.Key.page_down:  # 增加购买次数 PgDown 键
             winsound.Beep(800, 200)
-            data_input['buy_times'] += 1
-            log_and_print('buy_times已增加，当前值:', data_input['buy_times'])
+            data['buy_times'] += 1
+            print('buy_times已增加，当前值:', data['buy_times'])
             return True
-    global data
-    data = data_input.copy()
-    while not data_input['end_flag']:
-        log_and_print('正在检测键盘按键，按下Home键暂停，按下End键结束，按下PgUp键开始， 按下PgDown键增加购买次数...')
+    while not data['end_flag']:
+        print('正在检测键盘按键，按下Home键开始，按下End键结束，按下PgUp键暂停， 按下PgDown键增加购买次数...')
         with pynput.keyboard.Listener(on_release=KeyBoard_CallBack) as k:
             k.join()
-            log_and_print('pause_flag:', data_input['pause_flag'], 'end_flag:', data_input['end_flag'])
+            print('pause_flag:', data['pause_flag'], 'end_flag:', data['end_flag'])
 
 
 
 if __name__ == '__main__':
-    # # 用于测试
-    # dark_game = Dark_Game_Operation()
-    # # dark_game.Press_Search_Button()
-    # # dark_game.Press_Buy_Button(0)
-    # # dark_game.press_Fill_All_Items_Button()
-    # # dark_game.press_Complete_Trade_Button()
-    # r = dark_game.Get_Prices()
-    # print(r)
-    # exit()
 
     multiprocessing.freeze_support()
     manager = multiprocessing.Manager()
@@ -698,7 +642,11 @@ if __name__ == '__main__':
     dark_game = Dark_and_Darker_Appliaction(data)
     # dark_game.Dark_and_Darker_buy_ring(2, 200, 100)
     dark_game.Dark_and_Darker_buy_Surgicalkit(135)
-
+    # while not end_flag:
+    #     print('按下Home键开始，按下End键结束，按下PgUp键暂停...')
+    #     with pynput.keyboard.Listener(on_release=KeyBoard_CallBack) as k:
+    #         dark_game.Dark_and_Darker_buy_ring(2, 200, 100)
+    #         k.join()
     pk.join()
 
 

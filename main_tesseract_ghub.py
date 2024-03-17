@@ -16,6 +16,8 @@ import pynput # 调用dll文件
 # 安装完成以后配置环境变量，在计算机-->属性-->高级系统设置-->环境变量-->系统变量path
 import pytesseract
 
+from web_service import Open_Web_Service
+
 # 所有按钮的位置坐标均以2k分辨率为基准
 Search_button = (2315, 357, 153, 28)
 # 按钮位置
@@ -25,6 +27,7 @@ Fill_All_Items_button = (1147, 986, 250, 65)
 Complete_Trade_button = (1151, 1101, 250, 52)
 # 静态文本位置
 Prices = (1986, 441, 93, 850)
+Detailed_Prices = (2136, 464, 130, 812)
 Random_Attribute = (1495, 441, 112, 850)
 # Final_Price = (1383, 877, 168, 37) # 这个是小字，不好识别
 Final_Price = (255, 695, 275, 69)
@@ -355,13 +358,31 @@ class Dark_Game_Operation:
         result = OCR_image(img)
         # 转换识别结果为数组
         result = result.split('\n')
-        print(result)
         try:
             # 清空空元素
             result = [x for x in result if x]
             # 将识别结果中的,去掉
             result = [x.replace(',', '') for x in result]
             result = [int(x) for x in result]
+            if len(result) < 10:
+                result = -1
+            return result
+        except:
+            return -1
+    
+    def Get_Detailed_Prices(self):
+        img = pyautogui.screenshot(region=(Detailed_Prices[0], Detailed_Prices[1], Detailed_Prices[2], Detailed_Prices[3]))
+        img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+        result = OCR_image(img)
+        result = result.split('\n')
+        # Detailed_Prices正常情况下是个10维数组。每一个元素为单价*数量，需要将其分解为单价和数量
+        try:
+            result = [x for x in result if x]
+            result = [x.replace(',', '') for x in result]
+            # 将×作为分隔符，分割出单价和数量
+            result = [x.split('x') for x in result]
+            # 价格转换为浮点数，数量转换为整数
+            result = [[float(x[0]), int(x[1])] for x in result]
             if len(result) < 10:
                 result = -1
             return result
@@ -513,7 +534,7 @@ class Dark_and_Darker_Appliaction:
         self.game = Dark_Game_Operation()
         self.output = Output()
         self.data = data
-    def Dark_and_Darker_buy_ring(self, min_rand_attrs, max_price_target, max_price_low):
+    def Dark_and_Darker_buy_ring_TrueMagicDamage(self, min_rand_attrs, max_price_target, max_price_low):
         """
         min_rand_attrs: 最小随机属性roll值
         max_price_target: 满足最小随机属性roll值的最大预算
@@ -570,9 +591,9 @@ class Dark_and_Darker_Appliaction:
                                         state = self.game.Buy_Item(target_item_index, prices[target_item_index])
                                         if state == 1:
                                             log_and_print('***已购买Ring，价格：[{0}]，随机属性：[{1}]***'.format(prices[target_item_index], rand_attrs[target_item_index]))
+                                            check_buy_times()
                                     except Exception as e:
                                         log_and_print(e)
-                                    check_buy_times()
                                     self.game.Press_Search_Button()
                                     break
                             # 如果有价格小于等于max_price_low，点击购买按钮
@@ -583,11 +604,77 @@ class Dark_and_Darker_Appliaction:
                                     state = self.game.Buy_Item(target_item_index, prices[target_item_index])
                                     if state == 1:
                                         log_and_print('***已购买Ring，价格：[{0}]，随机属性：[{1}]***'.format(prices[target_item_index], rand_attrs[target_item_index]))
+                                        check_buy_times()
                                 except Exception as e:
                                     log_and_print(e)
-                                check_buy_times()
+                                
                                 self.game.Press_Search_Button()
                                 break
+                        time.sleep(0.1 + random.random() * 0.2)
+                        self.game.Press_Search_Button()
+
+    def Dark_and_Darker_buy_ring_AdditionMagicDamage(self, min_rand_attrs, max_price_target):
+        """
+        min_rand_attrs: 最小随机属性roll值
+        max_price_target: 满足最小随机属性roll值的最大预算
+        max_price_low: 无需满足最小随机属性roll值的最大预算
+        """
+        log_and_print('正在运行Buy Ring程序...等待Dark and Darker启动...')
+        print_flag = True
+        while True:
+            time.sleep(1)
+            if data['end_flag']:
+                return
+            if data['pause_flag']:
+                if print_flag:
+                    log_and_print('已暂停...按下page up键继续...')
+                    print_flag = False
+                continue
+            print_flag = True
+
+            if 'Dark and Darker' in pyautogui.getActiveWindow().title:
+                log_and_print('Dark and Darker is running...')
+                # 检测部位是否为Ring
+                if 'Ring' not in self.game.Check_Slot():
+                    # log_and_print('Slot is not Ring. Waiting for 1s...')
+                    time.sleep(1)
+                    continue
+                else:
+                    self.game.Press_Search_Button()
+                    time.sleep(1 + random.random() * 0.5)
+                    old_prices = []
+                    old_rand_attrs = []
+                    while True:
+                        if data['end_flag']:
+                            return
+                        if data['pause_flag']:
+                            log_and_print('已暂停...按下page up键继续...')
+                            break
+                        if 'Dark and Darker' not in pyautogui.getActiveWindow().title:
+                            log_and_print('Dark and Darker is not running...')
+                            break
+                        prices = self.game.Get_Prices()
+                        rand_attrs = self.game.Get_Random_Attribute()
+                        # 如果prices和rand_attrs都不为-1
+                        if prices != -1 and rand_attrs != -1:
+                            # 如果价格或者随机属性有变化，打印出来
+                            if prices != old_prices or rand_attrs != old_rand_attrs:
+                                self.output.Print_Random_Attribute_and_Prices(rand_attrs, prices)
+                            old_prices = prices
+                            old_rand_attrs = rand_attrs
+                            # 如果rand_attrs有大于min_rand_attrs的值，且价格小于max_price_target，点击购买按钮
+                            target_item_index = rand_attrs.index(max(rand_attrs))
+                            if rand_attrs[target_item_index] >= min_rand_attrs and prices[target_item_index] <= max_price_target:
+                                    ringing()
+                                    try:
+                                        state = self.game.Buy_Item(target_item_index, prices[target_item_index])
+                                        if state == 1:
+                                            log_and_print('***已购买Ring，价格：[{0}]，随机属性：[{1}]***'.format(prices[target_item_index], rand_attrs[target_item_index]))
+                                            check_buy_times()
+                                    except Exception as e:
+                                        log_and_print(e)
+                                    self.game.Press_Search_Button()
+                                    break
                         time.sleep(0.1 + random.random() * 0.2)
                         self.game.Press_Search_Button()
     
@@ -637,12 +724,68 @@ class Dark_and_Darker_Appliaction:
                                     state = self.game.Buy_Item(target_item_index, prices[target_item_index])
                                     if state == 1:
                                         log_and_print('***已购买Surgical kit，价格：[', prices[target_item_index], ']***')
+                                        check_buy_times()
                                 except Exception as e:
                                     log_and_print(e)
-                                check_buy_times()
                                 self.game.Press_Search_Button()
                                 break
-                        time.sleep(0.3 + random.random() * 0.2)
+                        time.sleep(0.1 + random.random() * 0.2)
+                        self.game.Press_Search_Button()
+    
+    def Dark_and_Darker_buy_Protection(self, max_price_low):
+        log_and_print('正在运行Buy Protection程序...等待Dark and Darker启动...')
+        print_flag = True
+        while True:
+            time.sleep(1)
+            if data['end_flag']:
+                return
+            if data['pause_flag']:
+                if print_flag:
+                    log_and_print('已暂停...按下page up键继续...')
+                    print_flag = False
+                continue
+            print_flag = True
+            if 'Dark and Darker' in pyautogui.getActiveWindow().title:
+                log_and_print('Dark and Darker is running...')
+                # 检测物品名称是否为Protection
+                if 'Protection' not in self.game.Check_Item_Name():
+                    time.sleep(1)
+                    continue
+                else:
+                    self.game.Press_Search_Button()
+                    time.sleep(1 + random.random() * 0.5)
+                    old_prices = []
+                    while True:
+                        if data['end_flag']:
+                            return
+                        if data['pause_flag']:
+                            break
+                        if 'Dark and Darker' not in pyautogui.getActiveWindow().title:
+                            log_and_print('Dark and Darker is not running...')
+                            break
+                        prices = self.game.Get_Prices()
+                        details_prices = self.game.Get_Detailed_Prices()
+                        # 如果prices不为-1，即识别成功
+                        if prices != -1:
+                            # 如果价格有变化，打印出来
+                            if prices != old_prices:
+                                self.output.Print_Prices(prices)
+                            old_prices = prices
+                            # 如果有价格小于等于max_price_low，点击购买按钮
+                            target_item_index = prices.index(min(prices))
+                            # 并且购买数量等于3，并且单价乘以3约等于max_price_low（差值小于max_price_low的1/10）
+                            if min(prices) <= max_price_low and details_prices[target_item_index][1] == 3 and abs(prices[target_item_index] * 3 - max_price_low) < max_price_low / 10:
+                                ringing()
+                                try:
+                                    state = self.game.Buy_Item(target_item_index, prices[target_item_index])
+                                    if state == 1:
+                                        log_and_print('***已购买Protection，价格：[{0}]，数量：[{1}]***'.format(prices[target_item_index], details_prices[target_item_index][1]))
+                                        check_buy_times()
+                                except Exception as e:
+                                    log_and_print(e)
+                                self.game.Press_Search_Button()
+                                break
+                        time.sleep(0.1 + random.random() * 0.2)
                         self.game.Press_Search_Button()
 
 
@@ -683,7 +826,7 @@ if __name__ == '__main__':
     # # dark_game.Press_Buy_Button(0)
     # # dark_game.press_Fill_All_Items_Button()
     # # dark_game.press_Complete_Trade_Button()
-    # r = dark_game.Get_Prices()
+    # r = dark_game.Get_Detailed_Prices()
     # print(r)
     # exit()
 
@@ -693,13 +836,20 @@ if __name__ == '__main__':
     data.update(init)
     queue = manager.Queue(10)
     pk = Process(target=Listen_KeyBoard, args=(data,), name='Listen_KeyBoard')
+
+
+    pweb = Process(target=Open_Web_Service, args=(data,), name='Open_Web_Service')
     pk.start()
+    pweb.start()
 
     dark_game = Dark_and_Darker_Appliaction(data)
-    # dark_game.Dark_and_Darker_buy_ring(2, 200, 100)
-    dark_game.Dark_and_Darker_buy_Surgicalkit(135)
+    # dark_game.Dark_and_Darker_buy_ring_TrueMagicDamage(2, 200, 100)
+    dark_game.Dark_and_Darker_buy_ring_AdditionMagicDamage(3, 150)
+    # dark_game.Dark_and_Darker_buy_Surgicalkit(121)
+    # dark_game.Dark_and_Darker_buy_Protection(75)
 
     pk.join()
+    pweb.join()
 
 
 

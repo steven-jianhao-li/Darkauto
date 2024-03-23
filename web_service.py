@@ -1,11 +1,14 @@
 # 用于读取log文件夹下的日志文件，加以分析后，提供给前端页面
 # 通过flask框架提供web服务
 
+import logging
 from flask import Flask, request, jsonify, send_from_directory
 import os
 import json
 import re
 import time
+
+from Functions import log_and_print
 
 # 当前文件所在目录
 File_Dir = os.path.dirname(os.path.abspath(__file__))
@@ -21,8 +24,8 @@ def Read_Log_File(File_Path):
 
 # 分析日志文件
 def Analyse_Buy_Conclusion(Log_Content):
-    # 通过正则表达式匹配"***已购买{0}，价格：[ {1} ]***"的字符串，其中{0}为商品名称，{1}为价格。例如***已购买Surgical kit，价格：[ 120 ]***
-    Original_Buy_Conclusion = re.findall(r'\*\*\*已购买(.*?)，价格：\[ (.*?) \]\*\*\*', Log_Content)
+    # 通过正则表达式匹配"***已购买{0}，价格：[ {1} ]***"的字符串，其中{0}为商品名称，{1}为价格。例如***已购买Surgical kit，价格：[ 120 ...
+    Original_Buy_Conclusion = re.findall(r'\*\*\*已购买(.*?)，价格：\[(.*?)\]', Log_Content)
     # 将商品名称存入字典，相同商品名称的价格依次存入列表
     Buy_Conclusion = {}
     for i in Original_Buy_Conclusion:
@@ -49,10 +52,27 @@ def Show_Current_Price(Log_Content):
     # 230 240 248 248 249 249 249 250 250 250 
     # -----------------------------------------------------------------------
     Original_Current_Price = re.findall(r'-'*71+'\n(.*?)\n'+'-'*71, Log_Content, re.DOTALL)
-    # 将字符串转换为列表
-    Current_Price = Original_Current_Price[-1].split()
+    if len(Original_Current_Price) == 0:
+        return [-1]
+    # 检测是否有Rand_Attrs: 在当前物价中，如果有，说明返回的结果既包括物价，也包括随机属性
+    if 'Rand_Attrs:' in Original_Current_Price[-1]:
+        # 返回json，包括物价数组和随机属性数组
+        Current_Price = Original_Current_Price[-1].split('Rand_Attrs:')[0].split('|')[1:]
+        # 去除Current_Price中的空格和换行符
+        Current_Price = [i.strip() for i in Current_Price]
 
-    return Current_Price
+        Rand_Attrs = Original_Current_Price[-1].split('Rand_Attrs:')[1].split('|')[1:]
+        # 去除Rand_Attrs中的空格和换行符
+        Rand_Attrs = [i.strip() for i in Rand_Attrs]
+        # print([Current_Price, Rand_Attrs])
+        return [Current_Price, Rand_Attrs]
+    else:
+        # 返回json，只包括物价数组
+        Current_Price = Original_Current_Price[-1].split('|')[1:]
+        Rand_Attrs = []
+        # print([Current_Price, Rand_Attrs])
+        return [Current_Price, Rand_Attrs]
+
 
 def Callculate_But_Succes_Rate(Log_Content):
     # 失败情况：
@@ -63,14 +83,16 @@ def Callculate_But_Succes_Rate(Log_Content):
     Original_Buy_Fail = re.findall(r'物品已售出', Log_Content)
     # 通过正则表达式匹配"价格一致，购买中......购买成功！"的字符串
     Original_Buy_Success = re.findall(r'购买成功', Log_Content)
-    print(len(Original_Buy_Success))
-    print(len(Original_Buy_Fail))
     if len(Original_Buy_Success) + len(Original_Buy_Fail) == 0:
-        return -1
-    return len(Original_Buy_Success) / (len(Original_Buy_Success) + len(Original_Buy_Fail))
+        return [0, 0]
+    return [len(Original_Buy_Success), len(Original_Buy_Fail)]
+
 
 def Open_Web_Service(Data_input):
     app = Flask(__name__)
+    # 获取 Werkzeug 的日志记录器并设置其级别为错误
+    werkzeug_logger = logging.getLogger('werkzeug')
+    werkzeug_logger.setLevel(logging.ERROR)
     print('Web Service is running...')
     target_log = Data_input['LogFilePath']
 
@@ -104,7 +126,6 @@ def Open_Web_Service(Data_input):
         Log_Content = Read_Log_File(target_log)
         # 分析日志文件
         Buy_Success_Rate = Callculate_But_Succes_Rate(Log_Content)
-        print(Buy_Success_Rate)
         return jsonify(Buy_Success_Rate)
 
     @app.route('/log', methods=['GET'])
@@ -119,12 +140,19 @@ def Open_Web_Service(Data_input):
     def index():
         return send_from_directory(File_Dir + '/HTML', 'Index.html')
 
+    @app.route('/add_buy_times', methods=['GET'])
+    def add_buy_times():
+        # 直接对Data_input['buy_times']进行加1操作
+        Data_input['buy_times'] += 1
+        log_and_print(Data_input['LogFilePath'], 'buy_times已增加，当前值:', Data_input['buy_times'])
+        return jsonify(Data_input['buy_times'])
+
 
     # 启动web服务，默认端口为5000，可通过host参数指定ip地址
     app.run(host='0.0.0.0', port=5000, debug=False)
 
 if __name__ == '__main__':
     Data_input = {
-        "LogFilePath": r'C:\Users\Steven\Desktop\Darkauto\log\2024_03_11 14_50_12.txt'
+        "LogFilePath": r'C:\Users\Steven\Desktop\Darkauto\log\2024_03_12 19_05_16.txt'
     }
     Open_Web_Service(Data_input)

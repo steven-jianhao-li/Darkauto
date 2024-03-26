@@ -921,11 +921,11 @@ if __name__ == '__main__':
 
     dark_game = Dark_and_Darker_Appliaction(data)
     # dark_game.Dark_and_Darker_buy_ring_TrueMagicDamage(2, 200, 100)
-    # dark_game.Dark_and_Darker_buy_ring_AdditionMagicDamage(3, 150, 65)
+    dark_game.Dark_and_Darker_buy_ring_AdditionMagicDamage(3, 150, 65)
     
     # dark_game.Dark_and_Darker_buy_Surgicalkit(10)
     # dark_game.Dark_and_Darker_buy_Protection(75)
-    dark_game.Dark_and_Darker_buy_Gold_Coin_Bag(2500)
+    # dark_game.Dark_and_Darker_buy_Gold_Coin_Bag(2500)
     pk.join()
     pweb.join()
 

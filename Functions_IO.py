@@ -1,4 +1,5 @@
 import os
+import winsound
 
 # log_and_print可能有多个参数输入，和print(1, 2)一样
 def log_and_print(log_file_path, *log_str, sep=' ', end='\n'):
@@ -16,3 +17,7 @@ def log_and_print(log_file_path, *log_str, sep=' ', end='\n'):
     # 用utf-8编码打开文件，如果文件不存在则创建，如果文件存在则在文件末尾追加
     with open(log_file_path, 'a', encoding='utf-8') as f:
         f.write(log_str + end)
+
+def ringing():
+    winsound.Beep(1000, 100)
+    pass

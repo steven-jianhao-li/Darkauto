@@ -8,7 +8,7 @@ import json
 import re
 import time
 
-from Functions import log_and_print
+from Functions_IO import log_and_print
 
 # 当前文件所在目录
 File_Dir = os.path.dirname(os.path.abspath(__file__))

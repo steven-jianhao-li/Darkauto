@@ -1,3 +1,4 @@
+import argparse
 from multiprocessing import Process
 import multiprocessing
 import numpy as np
@@ -24,8 +25,8 @@ from Functions_OCR import OCR_image, OCR_Raw_ScreenShot
 # 所有按钮的位置坐标均以2k分辨率为基准
 Search_button = (2315, 357, 153, 28)
 # 按钮位置
-first_Buy_buttons = (2325, 468, 130, 17)        # 第一个Buy按钮的位置，其余按钮坐标从上向下y坐标依次递减87
-Buy_buttons_decrease_y = 87
+first_Buy_buttons = (2389 - 50 / 2, 477 - 12 / 2, 50, 12)        # 第一个Buy按钮的位置，其余按钮坐标从上向下y坐标依次递减87
+Buy_buttons_decrease_y = 86.7
 Fill_All_Items_button = (1147, 986, 250, 65)
 Complete_Trade_button = (1151, 1101, 250, 52)
 # 静态文本位置
@@ -49,7 +50,7 @@ File_Path = os.path.abspath(os.path.dirname(__file__))
 init = {
     'pause_flag': False,
     'end_flag': False,
-    'buy_times': 2,
+    'buy_times': 10,
     'LogFilePath': '{0}/log/{1}.txt'.format(File_Path, time.strftime('%Y_%m_%d %H_%M_%S', time.localtime()))
 }
 
@@ -178,7 +179,7 @@ class LOGITECH:
         相当于最多保持移动1秒，若在1秒内未达到指定坐标则退出，不执行点击操作
         :param end_xy: 目标坐标
         :param min_xy: 最小移动量
-        :param min_time: 最小时间
+        :param min_time: 最小移动时间间隔
         :return: 是否到达目标坐标
         """
         if not self.state:
@@ -373,7 +374,7 @@ class Dark_Game_Operation:
         self.Press_Buy_Button(index)
         # 点击Fill All Items按钮
         self.press_Fill_All_Items_Button()
-        time.sleep(random.random() * 0.01)
+        time.sleep(0.01 + random.random() * 0.01)
         # 检测价格是否一致
         img = pyautogui.screenshot(region=(Final_Price_Text[0], Final_Price_Text[1], Final_Price_Text[2], Final_Price_Text[3]))
         final_price = OCR_Raw_ScreenShot(img)
@@ -490,7 +491,8 @@ class Dark_Log_Output:
 class BaseItemFunc:
     def __init__(self, item_func_name, item_name = '-1', rarity = '-1', slot = '-1', type = '-1', static_attribute = '-1', random_attribute = '-1', target_prices_chart = {}) -> None:
         """
-        detailed_item_name: 物品详细名称，如Ring_AdditionalMagicDamage"""
+        :param item_func_name: 物品功能函数名，如Ring_AdditionalMagicalDamage
+        """
         self.item_func_name = item_func_name
         self.Item_Name = item_name
         self.Rarity = rarity
@@ -501,6 +503,7 @@ class BaseItemFunc:
         if item_func_name in target_prices_chart:
             self.target_prices = target_prices_chart[self.item_func_name]
         else:
+            self.target_prices = -1
             print('Error: 未找到对应的价格表')
 
     # 条件检测函数
@@ -517,7 +520,7 @@ class BaseItemFunc:
                 return False
         return True
 
-    def get_price_threshold(rand_attr):
+    def get_price_threshold(self, rand_attr):
         """
         根据随机属性获取价格阈值"""
         # 先解析一下价格表，获取随机属性范围对应的最大价格
@@ -555,7 +558,7 @@ class BaseItemFunc:
                 try:
                     state = game_op.Buy_Item(i, prices[i])
                     if state == 1:
-                        log_and_print(data['LogFilePath'], '***已购买{0}，价格：[{1}]，随机属性：[{2}]***'.format(self.Item_Name, prices[i], rand_attrs[i]))
+                        log_and_print(data['LogFilePath'], '***已购买{0}，价格：[{1}]，随机属性：[{2}]***'.format(self.item_func_name, prices[i], rand_attrs[i]))
                         check_buy_times()
                 except Exception as e:
                     log_and_print(data['LogFilePath'], e)
@@ -599,6 +602,13 @@ class Ring_TrueMagicalDamage_Func(BaseItemFunc):
                             slot='Ring', 
                             random_attribute='True Magical Damage', 
                             target_prices_chart=target_prices_chart)
+        
+class Ring_AdditionalPhysicalDamage_Func(BaseItemFunc):
+    def __init__(self, target_prices_chart) -> None:
+        super().__init__(   item_func_name='Ring_AdditionalPhysicalDamage', 
+                            slot='Ring', 
+                            random_attribute='Additional Physical Damage', 
+                            target_prices_chart=target_prices_chart)
 
 class Surgicalkit_Func(BaseItemFunc):
     def __init__(self, target_prices_chart) -> None:
@@ -611,6 +621,8 @@ class Gold_Coin_Bag_Func(BaseItemFunc):
         super().__init__(   item_func_name='Gold_Coin_Bag', 
                             item_name='Gold Coin Bag', 
                             target_prices_chart=target_prices_chart)
+        
+
 
 class Dark_and_Darker_Appliaction:
     def __init__(self, data) -> None:
@@ -683,7 +695,7 @@ class Dark_and_Darker_Appliaction:
         :param item_function: 功能函数，如Ring_AdditionalMagicDamage
         :param target_prices: 目标价格表，规定了不同类型物品的价格上限，如随机属性AdditionalMagicDamage为1的Ring的价格上限
         """
-        log_and_print(data['LogFilePath'], '正在运行Buy {0}程序...等待Dark and Darker启动...'.format(item_func.__detail_item_name__))
+        log_and_print(data['LogFilePath'], '正在运行Buy {0}程序...等待Dark and Darker启动...'.format(item_func.item_func_name))
         print_flag = True
         while True:
             time.sleep(0.5 + random.random() * 0.5)
@@ -734,10 +746,10 @@ class Dark_and_Darker_Appliaction:
                             old_rand_attrs = rand_attrs
                             # 如果不仅仅是最大价格，调用MixedLogic_Buy
                             if not item_func.target_prices['only_max_price']:
-                                if not item_func.MixedLogic_Buy(self.game_op, prices, rand_attrs):
+                                if item_func.MixedLogic_Buy(self.game_op, prices, rand_attrs):
                                     break
                             else:
-                                if not item_func.OnlyMax_Buy(self.game_op, prices):
+                                if item_func.OnlyMax_Buy(self.game_op, prices):
                                     break
                         time.sleep(0.03 + random.random() * 0.05)
                         self.game_op.Press_Search_Button()
@@ -770,7 +782,6 @@ def Listen_KeyBoard(data_input):
             log_and_print(data_input['LogFilePath'], 'pause_flag:', data_input['pause_flag'], 'end_flag:', data_input['end_flag'])
 
 
-
 if __name__ == '__main__':
     target_prices_chart = {
         'Ring_AdditionalMagicalDamage': {
@@ -784,6 +795,14 @@ if __name__ == '__main__':
             }
         },
         'Ring_TrueMagicalDamage': {
+            'only_max_price': False,
+            'additional_attr2max_price': {
+                1   : 50,
+                2   : 100,
+                '*' : 100
+            }
+        },
+        'Ring_AdditionalPhysicalDamage': {
             'only_max_price': False,
             'additional_attr2max_price': {
                 1   : 65,
@@ -836,10 +855,27 @@ if __name__ == '__main__':
     pweb.start()
 
     dark_game = Dark_and_Darker_Appliaction(data)
-    dark_game.Dark_and_Darker_BuyItem(Ring_AdditionalMagicalDamage_Func(target_prices_chart))
-    dark_game.Dark_and_Darker_BuyItem(Ring_TrueMagicalDamage_Func(target_prices_chart))
-    dark_game.Dark_and_Darker_BuyItem(Surgicalkit_Func(target_prices_chart))
-    dark_game.Dark_and_Darker_BuyItem(Gold_Coin_Bag_Func(target_prices_chart))
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--Ring_AdditionalPhysicalDamage', action='store_true')
+    parser.add_argument('--Ring_TrueMagicalDamage', action='store_true')
+    parser.add_argument('--Ring_AdditionalMagicalDamage', action='store_true')
+    # 如果没有传入参数，使用默认参数
+    args = parser.parse_args()
+    if not args:
+        dark_game.Dark_and_Darker_BuyItem(Ring_AdditionalMagicalDamage_Func(target_prices_chart))
+    if args.Ring_AdditionalMagicalDamage:
+        dark_game.Dark_and_Darker_BuyItem(Ring_AdditionalMagicalDamage_Func(target_prices_chart))
+    if args.Ring_TrueMagicalDamage:
+        dark_game.Dark_and_Darker_BuyItem(Ring_TrueMagicalDamage_Func(target_prices_chart))
+    if args.Ring_AdditionalPhysicalDamage:
+        # & C:/Python312/python.exe c:/Users/Steven/Desktop/Darkauto/main_tesseract_ghub.py -ring_additional_physical_damage
+        # main_tesseract_ghub.py: error: unrecognized arguments: -ring_additional_physical_damage
+        dark_game.Dark_and_Darker_BuyItem(Ring_AdditionalPhysicalDamage_Func(target_prices_chart))
+    # dark_game.Dark_and_Darker_BuyItem(Ring_TrueMagicalDamage_Func(target_prices_chart))
+    # dark_game.Dark_and_Darker_BuyItem(Ring_AdditionalPhysicalDamage_Func(target_prices_chart))
+    # dark_game.Dark_and_Darker_BuyItem(Surgicalkit_Func(target_prices_chart))
+    # dark_game.Dark_and_Darker_BuyItem(Gold_Coin_Bag_Func(target_prices_chart))
+
     # dark_game.Dark_and_Darker_buy_ring_TrueMagicDamage(2, 200, 100)
     # dark_game.Dark_and_Darker_buy_ring_AdditionalMagicDamage(3, 150, 65)
     

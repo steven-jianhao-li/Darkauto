@@ -1,0 +1,183 @@
+<!-- 主页，显示Darkauto的信息 -->
+<!-- 目前有'/log'和'/left_buy_times'两个接口 -->
+<!-- 设置两个按钮，分别跳转到'/log'和'/left_buy_times'两个接口 -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Darkauto</title>
+    <!-- <meta http-equiv="refresh" content="1"> -->
+    <!-- 本html的路径为C:\Users\Steven\Desktop\Darkauto\HTML\Index.html -->
+    <!-- CSS文件的路径为C:\Users\Steven\Desktop\Darkauto\HTML\static\css\Button.css -->
+    <!-- 链接到CSS文件，其目录为'/static/css' -->
+    <!-- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ -->
+    <link rel="stylesheet" href="./static/css/Button.css">
+    <!-- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ -->
+</head>
+<body>
+    <h1 style="display: inline-block;">Darkauto</h1>
+    <!-- <p>目前有'/buy_history'和'/left_buy_times'两个接口</p> -->
+    <p style="border: 1px solid #000; padding: 10px;display: inline-flex;" id="time"></p>
+    <!-- 换行 -->
+    <br>
+    <script>
+        // 获取当前时间
+        let time = new Date();
+        // 将时间显示在输出框中，精确到毫秒
+        document.getElementById('time').innerText = time.toLocaleString() + '.' + time.getMilliseconds();
+    </script>
+    <!-- 美化以下两个按钮，给按钮加上一些样式 -->
+    <style>
+        button {
+            padding: 20px; /* 按钮内文字与按钮边框的距离 */
+            margin: 10px; /* 按钮与按钮之间的距离 */
+            font-size: 22px;
+            /* 按钮的大小 */
+            width: 300px;
+        }
+        p {
+            font-size: 18px;
+            padding: 10px;
+        }
+    </style>
+    <button onclick="window.location.href='/'">Refresh</button>
+    <br>
+    <!-- 添加一些新按钮，新按钮有新的样式 -->
+    <!-- <button onclick="window.location.href='/log'">Show_Log</button>
+    <button onclick="window.location.href='/buy_history'">Buy_History</button>
+    <button onclick="window.location.href='/left_buy_times'">Left_Buy_Times</button> -->
+    <button class="button1" onclick="window.location.href='/log'">Show_Log</button>
+    <button class="button2" onclick="window.location.href='/buy_history'">Buy_History</button>
+    <button class="button3" onclick="window.location.href='/left_buy_times'">Left_Buy_Times</button>
+    
+    <!-- 新增一个输出框，用来显示'/buy_history'接口的返回值 -->
+    <!-- 加上以下输出框的名字，方便用户理解 -->
+    <p>1. 购买记录：</p>
+    <!-- 美化一下这个输出框，给框框加上一些样式 -->
+    <p id="buy_history" style="border: 1px solid #000; padding: 10px;"></p>
+    <script>
+        // 使用fetch函数，调用'/buy_history'接口
+        fetch('/buy_history')
+            .then(response => response.json())
+            .then(data => {
+                // 将返回值（字典）显示在输出框中
+                // 输出格式为：商品名：购买价格1,购买价格2,购买价格3...
+                // document.getElementById('buy_history').innerText = JSON.stringify(data);
+                // 为了更好的显示效果，将返回值的字典转换为字符串
+                // 例如：{'商品1': [1, 2, 3], '商品2': [4, 5, 6]} => 商品1：1,2,3...商品2：4,5,6...
+                // 如果data是空字典，则显示'暂无购买记录'
+                if (Object.keys(data).length === 0) {
+                    document.getElementById('buy_history').innerText = '暂无购买记录';
+                    return;
+                }
+                let buy_history = '';
+                // 计算均价
+                let average = {};
+                for (let key in data) {
+                    let sum = 0;
+                    for (let i = 0; i < data[key].length; i++) {
+                        // 转换为整数类型
+
+                        sum += parseInt(data[key][i]);
+                    }
+                    average[key] = sum / data[key].length;
+                }
+                for (let key in data) {
+                    buy_history += key + '——共购买' + data[key].length + '次，';
+                    buy_history += '均价：' + average[key];
+                    buy_history += '，具体价格如下:\n';
+                    buy_history += '| ' + data[key].join(' | ') + ' |\n';
+                    // 分割线
+                    if (key !== Object.keys(data)[Object.keys(data).length - 1]) {
+                        buy_history += '--------------------------------\n';
+                    }
+                }
+                document.getElementById('buy_history').innerText = buy_history;
+            });
+    </script>
+    <!-- 再新增一个输出框，用来显示'/left_buy_times'接口的返回值 -->
+    <!-- 加上以下输出框的名字，方便用户理解 -->
+    <p style="display: inline-block;">2. 剩余购买次数：</p>
+    <!-- 美化一下这个输出框，给框框加上一些样式 -->
+    <p id="left_buy_times" style="display: inline-block; border: 1px solid #000; padding: 10px;"></p>
+    <script>
+        // 使用fetch函数，调用'/left_buy_times'接口
+        fetch('/left_buy_times')
+            .then(response => response.json())
+            .then(data => {
+                // 将返回值（数组）的最后一个元素显示在输出框中
+                document.getElementById('left_buy_times').innerText = parseInt(data[data.length - 1]);
+            });
+    </script>
+    <!-- 新增一个按钮，发送'/add_buy_times'的GET请求，但是这个接口没有返回值，只需要刷新页面即可 -->
+    <button onclick="addBuyTimes()">Add_Buy_Times</button>
+    <script>
+        async function addBuyTimes() {
+            await fetch('/add_buy_times');
+            location.reload();
+        }
+    </script>
+    <!-- 新增一个输出框，调用新的接口'/current_price' -->
+    <p style="padding: 10px;">3. 当前市场行情：</p>
+    <p id="current_price" style="border: 1px solid #000; padding: 10px;"></p>
+    <script>
+        // 使用fetch函数，调用'/current_price'接口
+        fetch('/current_price')
+            .then(response => response.json())
+            .then(data => {
+                // 将返回值（数组）显示在输出框中
+                // 输出格式为：价格1 | 价格2 | 价格3...
+                // 如果返回的数据既包括价格也包括随机属性，分别显示
+                if (data[0].length === 10 && data[1].length === 10) {
+                    let current_price = 'Price: ';
+                    let random_attribute = 'Random Attribute: ';
+                    for (let i = 0; i < data[0].length; i++) {
+                        current_price += data[0][i] + ' | ';
+                    }
+                    for (let i = 0; i < data[1].length; i++) {
+                        random_attribute += data[1][i] + ' | ';
+                    }
+                    result = current_price + '\n' + random_attribute;
+                    document.getElementById('current_price').innerText = result;
+                    return;
+                }
+                // 如果返回的数据只包括价格，直接显示
+                else if (data[0].length === 10 && data[1].length === 0) {
+                    let current_price = 'Price: ';
+                    for (let i = 0; i < data[0].length; i++) {
+                        current_price += data[0][i] + ' | ';
+                    }
+                    document.getElementById('current_price').innerText = current_price;
+                    return;
+                }
+                let current_price = '';
+                for (let i = 0; i < data.length; i++) {
+                    current_price += data[i] + ' | ';
+                }
+                document.getElementById('current_price').innerText = current_price;
+            });
+    </script>
+    <!-- 加上以下输出框的名字，方便用户理解 -->
+    <p style="display: inline-block; padding: 10px;">4. 购买成功率：</p>
+    <!-- 美化一下这个输出框，给框框加上一些样式 -->
+    <p id="buy_success_rate" style="display: inline-block; border: 1px solid #000; padding: 10px;"></p>
+    <script>
+        // 使用fetch函数，调用'/buy_success_rate'接口
+        fetch('/buy_success_rate')
+            .then(response => response.json())
+            .then(data => {
+                // 返回值是数组，分别代表成功次数和失败次数
+                // 将返回值（数组）显示在输出框中
+                // 输出格式为："成功"次数 | "失败"次数
+                result = '成功: ' + data[0] + '次 | 失败: ' + data[1] + '次';
+                if (data[0] != "0" && data[1] != "0")
+                    result += ' | 成功率：' + (data[0] / (data[0] + data[1]) * 100).toFixed(2) + '%';
+                else
+                    result += ' | 成功率：0%';
+                document.getElementById('buy_success_rate').innerText = result;
+
+            });
+    </script>
+    <p> </p>
+
+</body>
+</html>

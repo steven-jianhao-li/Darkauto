@@ -10,7 +10,7 @@
     <!-- CSS文件的路径为C:\Users\Steven\Desktop\Darkauto\HTML\static\css\Button.css -->
     <!-- 链接到CSS文件，其目录为'/static/css' -->
     <!-- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ -->
-    <link rel="stylesheet" href="./static/css/Button.css">
+    <link rel="stylesheet" href="static/css/Button.css">
     <!-- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ -->
 </head>
 <body>
@@ -169,7 +169,7 @@
                 // 将返回值（数组）显示在输出框中
                 // 输出格式为："成功"次数 | "失败"次数
                 result = '成功: ' + data[0] + '次 | 失败: ' + data[1] + '次';
-                if (data[0] != "0" && data[1] != "0")
+                if (data[0] != "0" || data[1] != "0")
                     result += ' | 成功率：' + (data[0] / (data[0] + data[1]) * 100).toFixed(2) + '%';
                 else
                     result += ' | 成功率：0%';
@@ -177,6 +177,8 @@
 
             });
     </script>
+    <!-- 新增按钮，点击跳转至/usercontrol -->
+    <button onclick="window.location.href='/usercontrol'">User Control</button>
     <p> </p>
 
 </body>

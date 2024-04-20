@@ -1,0 +1,182 @@
+<!-- 本页面用于为用户提供操作计算机的一种交互方式，最上面展示当前计算机的屏幕截图，并每隔0.5s更新一次(通过/get_screen_shot接口获取最新屏幕截图) -->
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>用户控制</title>
+    <meta charset="utf-8">
+    <link rel="stylesheet" type="text/css" href="HTML/CSS/UserControl.css">
+    <script src="JS/UserControl.js"></script>
+</head>
+<body>
+    <div id="screen">
+        <img id="screen_shot" src="/get_screen_shot" alt="屏幕截图" onload="imageLoaded()">
+    </div>
+
+    <button id="move_mouse" onclick="moveMouse()">移动鼠标</button>
+    <div id="crosshair" style="display: none;"></div>
+    <div id="refresh_interval">
+        <label for="slider">调整刷新间隔（毫秒）：</label>
+        <input type="range" id="slider" min="300" max="3000" value="500" oninput="adjustInterval(this.value)">
+        <label for="input">或直接输入：</label>
+        <input type="number" id="input" min="300" max="3000" value="500">
+        <button onclick="confirmInterval()">确认</button>
+    </div>
+    <script>
+        var eventX = null;
+        var eventY = null;
+        var clickX = null;
+        var clickY = null;
+        var refreshInterval = 500;
+        var intervalId = setInterval(refreshImage, refreshInterval);
+        var crosshair = document.getElementById('crosshair');
+        document.addEventListener('DOMContentLoaded', async function() {
+            // 尝试从localStorage获取Token
+            var token = localStorage.getItem('token');
+
+            // 如果Token不存在，重定向到login
+            if (!token) {
+                window.location.href = 'login';
+                return;
+            }
+
+            // 向服务器发送请求以验证Token的有效性
+            var response = await fetch('/verifytoken', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    token: token
+                })
+            });
+
+            var result = await response.json();
+
+            // 如果Token无效，重定向到login
+            if (!result.valid) {
+                window.location.href = 'login';
+                return;
+            }
+
+            // 如果Token有效，继续加载页面...
+        });
+        function imageLoaded() {
+            resizeImage();
+            if (eventX !== null && eventY !== null) {
+                showCrosshair(eventX, eventY);
+                eventX = null;
+                eventY = null;
+            }
+        }
+    
+        function resizeImage() {
+            var img = document.getElementById('screen_shot');
+        
+            // 获取图片的实际大小
+            var imgWidth = img.naturalWidth;
+            var imgHeight = img.naturalHeight;
+        
+            // 获取浏览器窗口的大小
+            var windowWidth = window.innerWidth;
+            var windowHeight = window.innerHeight;
+        
+            // 计算缩放因子
+            var scale = Math.min(windowWidth / imgWidth, windowHeight / imgHeight);
+        
+            // 调整图片的大小
+            img.style.width = Math.round(imgWidth * scale) + 'px';
+            img.style.height = Math.round(imgHeight * scale) + 'px';
+        }
+    
+        function refreshImage() {
+            document.getElementById('screen_shot').src = "/get_screen_shot?" + new Date().getTime();
+        }
+        document.getElementById('screen_shot').onclick = function(event) {
+            eventX = event.clientX;
+            eventY = event.clientY;
+            if (this.naturalWidth !== 0 && this.naturalHeight !== 0) {
+                showCrosshair(eventX, eventY);
+                eventX = null;
+                eventY = null;
+            }
+        };
+
+        function showCrosshair(x, y) {
+            var img = document.getElementById('screen_shot');
+
+            // 获取图片的实际大小
+            var imgWidth = img.naturalWidth;
+            var imgHeight = img.naturalHeight;
+
+            // 获取图片的显示大小
+            var displayWidth = img.width;
+            var displayHeight = img.height;
+
+            // 计算缩放因子
+            var scale = Math.min(displayWidth / imgWidth, displayHeight / imgHeight);
+
+            // 获取点击位置相对于图片的坐标
+            x -= img.getBoundingClientRect().left;
+            y -= img.getBoundingClientRect().top;
+
+            // 根据图片的实际大小和显示大小来调整坐标
+            clickX = Math.round(x / scale);
+            clickY = Math.round(y / scale);
+
+            crosshair.style.left = x + 'px';
+            crosshair.style.top = y + 'px';
+            crosshair.style.display = 'block';
+        }
+        function adjustInterval(value) {
+            document.getElementById('input').value = value;
+            refreshInterval = value;
+            clearInterval(intervalId);
+            intervalId = setInterval(refreshImage, refreshInterval);
+        }
+
+        function confirmInterval() {
+            var value = document.getElementById('input').value;
+            if (value < 300 || value > 3000) {
+                alert("请输入一个在300到3000之间的值");
+                return;
+            }
+            document.getElementById('slider').value = value;
+            adjustInterval(value);
+        }
+        async function moveMouse() {
+            var token = localStorage.getItem('token');
+            var response = await fetch('/move_mouse', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': token, // 在请求头中添加token
+                },
+                body: JSON.stringify({
+                    x: clickX,
+                    y: clickY
+                })
+                }) 
+            // 如果状态码为401，说明Token无效，重定向到login
+            if (response.status === 401) {
+                window.location.href = 'login';
+                return;
+            }
+
+            var result = await response.json();
+
+            if (result) {
+                crosshair.style.border = '2px solid red';
+            };
+        }
+    </script>
+
+    <div id="control">
+        <button id="shutdown" onclick="shutdown()">关机</button>
+        <button id="restart" onclick="restart()">重启</button>
+        <button id="lock" onclick="lock()">锁屏</button>
+        <button id="unlock" onclick="unlock()">解锁</button>
+        <button id="sleep" onclick="sleep()">休眠</button>
+        <button id="wake" onclick="wake()">唤醒</button>
+    </div>
+</html>

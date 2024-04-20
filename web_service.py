@@ -1,14 +1,21 @@
 # 用于读取log文件夹下的日志文件，加以分析后，提供给前端页面
 # 通过flask框架提供web服务
 
+import csv
+from datetime import datetime, timedelta
+from io import BytesIO
 import logging
-from flask import Flask, request, jsonify, send_from_directory
+import uuid
+from flask import Flask, render_template, request, jsonify, send_file, send_from_directory, url_for
 import os
 import json
 import re
 import time
+import hashlib
+import pyautogui
 
 from Functions_IO import log_and_print
+# from main_tesseract_ghub import LOGITECH
 
 # 当前文件所在目录
 File_Dir = os.path.dirname(os.path.abspath(__file__))
@@ -88,13 +95,77 @@ def Callculate_But_Succes_Rate(Log_Content):
     return [len(Original_Buy_Success), len(Original_Buy_Fail)]
 
 
+
+class user_certification:
+    def __init__(self):
+        self.TOKENS_FILE = 'tokens.csv'
+        self.TOKEN_NoActionTTL = timedelta(minutes=5)
+        self.TOKEN_MaxTTL = timedelta(hours=12)
+        # 如果文件不存在，则创建文件
+        if not os.path.exists(self.TOKENS_FILE):
+            with open(self.TOKENS_FILE, mode='w', newline='') as file:
+                pass
+
+    def generate_token(self):
+        token = str(uuid.uuid4())
+        creation_time = datetime.now().isoformat()
+        return token, creation_time
+    
+
+    def delete_expired_tokens(self):
+        temp_rows = []
+        with open(self.TOKENS_FILE, mode='r', newline='') as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                creation_time = datetime.fromisoformat(row['creation_time'])
+                if datetime.now() < datetime.fromisoformat(row['expiry']) and \
+                        datetime.now() < creation_time + self.TOKEN_MaxTTL:
+                    temp_rows.append(row)
+        with open(self.TOKENS_FILE, mode='w', newline='') as file:
+            fieldnames = ['token', 'expiry', 'creation_time']
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(temp_rows)
+    
+    def validate_token(self, token):
+        with open(self.TOKENS_FILE, mode='r', newline='') as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                if row['token'] == token:
+                    if datetime.now() < datetime.fromisoformat(row['expiry']) and \
+                        datetime.now() < datetime.fromisoformat(row['creation_time']) + self.TOKEN_MaxTTL:
+                        return True
+                    else:
+                        # 删除过期的token
+                        self.delete_expired_tokens()
+                        return False
+        return False
+    
+    def update_token_expiry(self, token):
+        temp_rows = []
+        with open(self.TOKENS_FILE, mode='r', newline='') as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                if row['token'] == token:
+                    row['expiry'] = (datetime.now() + self.TOKEN_NoActionTTL).isoformat()
+                temp_rows.append(row)
+        with open(self.TOKENS_FILE, mode='w', newline='') as file:
+            fieldnames = ['token', 'expiry', 'creation_time']
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(temp_rows)
+
+
+
 def Open_Web_Service(Data_input):
-    app = Flask(__name__)
+    app = Flask(__name__, static_folder='HTML')
+    # url_for('static', filename='script.js')
     # 获取 Werkzeug 的日志记录器并设置其级别为错误
     werkzeug_logger = logging.getLogger('werkzeug')
     werkzeug_logger.setLevel(logging.ERROR)
     print('Web Service is running...')
     target_log = Data_input['LogFilePath']
+    uc = user_certification()
 
     @app.route('/buy_history', methods=['GET'])
     def log():
@@ -135,24 +206,121 @@ def Open_Web_Service(Data_input):
         # 把\n替换为<br>，以便在html页面中显示
         Log_Content = Log_Content.replace('\n', '<br>')
         return Log_Content
-
-    @app.route('/')
-    def index():
-        return send_from_directory(File_Dir + '/HTML', 'Index.html')
-
+    
     @app.route('/add_buy_times', methods=['GET'])
     def add_buy_times():
         # 直接对Data_input['buy_times']进行加1操作
         Data_input['buy_times'] += 1
         log_and_print(Data_input['LogFilePath'], 'buy_times已增加，当前值:', Data_input['buy_times'])
         return jsonify(Data_input['buy_times'])
+    
+    @app.route('/get_screen_shot', methods=['GET'])
+    def get_screen_shot():
+        # 获取当前屏幕截图
+        img = pyautogui.screenshot()
+        # 转换为可发送的格式
+        img_io = BytesIO()
+        img.save(img_io, 'PNG')
+        img_io.seek(0)
+        return send_file(img_io, mimetype='image/png')
+    
+    @app.route('/move_mouse', methods=['POST'])
+    def move_mouse():
+        # 从请求头中获取token
+        token = request.headers.get('Authorization')
+        if not token:
+            return jsonify({'error': 'Missing token'}), 401
+
+        # 验证token
+        if not uc.validate_token(token):
+            return jsonify({'error': 'Invalid token'}), 401
+        
+        # 删除过期的token
+        uc.delete_expired_tokens()
+
+        # 更新token的过期时间
+        uc.update_token_expiry(token)
+
+        # 获取前端传来的json数据
+        data = request.get_data()
+        data = json.loads(data)
+        # 移动鼠标
+        pyautogui.moveTo(data['x'], data['y'])
+        return jsonify({'message': 'Mouse moved successfully'}), 200
+
+    @app.route('/')
+    def index():
+        return send_from_directory(File_Dir + '/HTML', 'Index.html')
+    
+    @app.route('/usercontrol')
+    def usercontrol():
+        UserControl_Css_url = url_for('static', filename='CSS/UserControl.css')
+        return send_from_directory(File_Dir + '/HTML', 'UserControl.html')
+    
+    @app.route('/login')
+    def login():
+        login_Css_url = url_for('static', filename='CSS/Login.css')
+        return send_from_directory(File_Dir + '/HTML', 'Login.html')
+
+    @app.route('/loginrequest', methods=['POST'])
+    def loginrequest():
+        # 获取前端传来的json数据
+        data = request.get_json()
+        data_hashed_password = data['hashed_password']
+
+        # 读取明文密码文件Secret
+        with open('Secret', 'r') as f:
+            Secret = f.read()
+        
+
+        hashed_password = []
+        # 对明文密码和当前时间（精确到分钟）进行hash
+        m = hashlib.sha256()
+        # m.update(Secret.encode('utf-8'))
+        # m.update(str(int(time.time() / 60)).encode('utf-8'))
+        # print(Secret + str(int(time.time() / 60)))
+        m.update(str(Secret + str(int(time.time() / 60))).encode('utf-8'))
+        hashed_password.append(m.hexdigest())
+
+        # 对明文密码和当前时间的上一分钟进行hash
+        m = hashlib.sha256()
+        # m.update(Secret.encode('utf-8'))
+        # m.update(str(int(time.time() / 60) - 1).encode('utf-8'))
+        m.update(str(Secret + str(int(time.time() / 60) - 1)).encode('utf-8'))
+        hashed_password.append(m.hexdigest())
+
+        # 验证密码
+        if data_hashed_password in hashed_password:
+            # 生成token
+            token, creation_time = uc.generate_token()
+            expiry = (datetime.now() + uc.TOKEN_NoActionTTL).isoformat()
+            print('New generated token:', token, '\nExpiry time:', expiry)
+            with open(uc.TOKENS_FILE, mode='a', newline='') as file:
+                writer = csv.DictWriter(file, fieldnames=['token', 'expiry', 'creation_time'])
+                if os.stat(uc.TOKENS_FILE).st_size == 0:
+                        writer.writeheader()
+                writer.writerow({'token': token, 'expiry': expiry, 'creation_time': creation_time})
+            return jsonify({'token': token}), 200
+        return jsonify({'message': 'Invalid credentials'}), 401
+    
+    @app.route('/verifytoken', methods=['POST'])
+    def verifytoken():
+        # 获取前端传来的json数据
+        data = request.get_json()
+        token = data['token']
+        # 删除过期的token
+        uc.delete_expired_tokens()
+        if uc.validate_token(token):
+            return jsonify({'valid': 'Token is valid'}), 200
+        return jsonify({'error': 'Invalid token'}), 401
 
 
+    # logitech = LOGITECH()
     # 启动web服务，默认端口为5000，可通过host参数指定ip地址
     app.run(host='0.0.0.0', port=5000, debug=False)
 
 if __name__ == '__main__':
     Data_input = {
-        "LogFilePath": r'C:\Users\Steven\Desktop\Darkauto\log\2024_03_12 19_05_16.txt'
+        "LogFilePath": r'log\2024_03_12 19_05_16.txt'
     }
     Open_Web_Service(Data_input)

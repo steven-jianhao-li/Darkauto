@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>登录</title>
+    
+</head>
+<body>
+    <form id="loginForm" onsubmit="hashPasswordAndSubmit(event)">
+        <label for="password">密码:</label>
+        <input type="password" id="password" name="password">
+        <button type="submit">登录</button>
+    </form>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js"></script>
+    <script>
+        function hashPasswordAndSubmit(event) {
+            event.preventDefault(); // 阻止表单默认提交行为
+
+            // 获取用户输入的密码
+            var password = document.getElementById('password').value;
+
+            // 获取当前时间，精确到分钟
+            // 获取当前时间戳，提取分钟部分，不超过60分钟
+            var currentTime = Math.floor(Date.now() / 60000);
+            // 使用CryptoJS进行哈希操作
+            var hashedPassword = CryptoJS.SHA256(password + currentTime.toString()).toString();
+
+
+            // 发送POST请求到服务器
+            fetch('/loginrequest', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    hashed_password: hashedPassword
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                // 如果返回的数据json中有token字段，说明登录成功
+                if (data.token) {
+                    alert('登录成功'); // 显示成功消息
+                    localStorage.setItem('token', data.token); // 将token保存到localStorage
+                    window.location.href = '/usercontrol'; // 假设登录成功后跳转到仪表板页面
+                } else {
+                    alert('登录失败: ' + data.message); // 显示错误消息
+                }
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
+        }
+    </script>
+</body>
+</html>

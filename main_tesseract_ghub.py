@@ -32,17 +32,19 @@ Complete_Trade_button = (1151, 1101, 250, 52)
 # 静态文本位置
 Prices_Text = (1986, 441, 93, 850)
 Detailed_Prices_Text = (2136, 464, 130, 812)
-Random_Attribute_Text = (1495, 441, 112, 850)
+Random_Attribute_Text = (1450, 441, 112, 850)
 # Final_Price = (1383, 877, 168, 37) # 这个是小字，不好识别
 Final_Price_Text = (255, 695, 275, 69)
-Item_Name_Chosen_Text = (106, 263, 234, 24)
-Rarity_Chosen_Text = (0, 0, 0, 0)
-Slot_Chosen_Text = (818, 263, 234, 30)
-Type_Chosen_Text = (0, 0, 0, 0)
-Static_Attribute_Chosen_Text = (0, 0, 0, 0)
-Random_Attribute_Chosen_Text = (1895, 263, 234, 23)
+Item_Name_Chosen_Text = (65, 263, 200, 24)
+Rarity_Chosen_Text = (383, 263, 200, 24)
+Class_Chosen_Text = (701, 263, 200, 24)
+Slot_Chosen_Text = (1015, 263, 200, 24)
+Type_Chosen_Text = (1334, 263, 200, 24)
+Static_Attribute_Chosen_Text = (1649, 263, 200, 24)
+Random_Attribute_Chosen_Text = (1965, 263, 200, 24)
 Item_Sold_Text = (986, 177, 590, 58)
 Buy_Success_Text = (908, 596, 744, 152)
+Sure_to_Leave_Text = (1067, 617, 423, 110)
 
 # 初始化数据
 # 当前python文件的路径
@@ -179,7 +181,7 @@ class LOGITECH:
         相当于最多保持移动1秒，若在1秒内未达到指定坐标则退出，不执行点击操作
         :param end_xy: 目标坐标
         :param min_xy: 最小移动量
-        :param min_time: 最小移动时间间隔
+        :param min_time: 移动时的时间间隔
         :return: 是否到达目标坐标
         """
         if not self.state:
@@ -188,7 +190,7 @@ class LOGITECH:
         pid_x = PID() # 创建pid对象
         pid_y = PID()
 
-        for i in range(100):
+        for i in range(150):
             time.sleep(min_time) # 等待时间
             new_x, new_y = pyautogui.position() # 获取当前鼠标位置
 
@@ -238,15 +240,21 @@ class LOGITECH:
         self.keyboard_up(code)
     
 class IO_controller:
-    def __init__(self, min_time=0.01):
+    def __init__(self, min_time=0.0075):
         self.min_time = min_time
         self.logitech = LOGITECH()
+
+    def left_click(self, wait_time=0):
+        """鼠标左键点击"""
+        self.logitech.mouse_click('左', wait_time=wait_time)
 
     def move_to_left_click(self, x, y, min_time):
         """鼠标移动到指定位置并点击"""
         move_flag = self.logitech.mouse_move((x, y), min_time=min_time)
         if move_flag:   # 如果鼠标移动到指定位置，才会触发点击操作
             self.logitech.mouse_left_click()
+        else:
+            print("时间", time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()), "鼠标移动失败，未点击")
         
     def rand_move_to_left_click(self, x, y, rand_x, rand_y):
         """
@@ -278,6 +286,7 @@ class Dark_Game_Operation:
         rand_x = int(first_Buy_buttons[2] / 2)
         rand_y = int(first_Buy_buttons[3] / 2)
         self.io.rand_move_to_left_click(center_x, center_y, rand_x, rand_y)
+        self.io.left_click(0.001 + random.random() * 0.006)
 
     def press_Fill_All_Items_Button(self):
         center_x = int(Fill_All_Items_button[0] + Fill_All_Items_button[2] / 2)
@@ -311,6 +320,10 @@ class Dark_Game_Operation:
             # 将识别结果中的,去掉
             result = [x.replace(',', '') for x in result]
             result = [int(x) for x in result]
+            # ——————————————————————————————————————————————这里要优化↓
+            # 把'11'这个结果转换为111
+            result = [x if x != 11 else 111 for x in result]
+            # ————————————————————————————————————————————————
             if len(result) < 10:
                 result = -1
             return result
@@ -367,6 +380,14 @@ class Dark_Game_Operation:
             return True
         else:
             return False
+        
+    def Check_Sure_to_Leave(self):
+        img = pyautogui.screenshot(region=(Sure_to_Leave_Text[0], Sure_to_Leave_Text[1], Sure_to_Leave_Text[2], Sure_to_Leave_Text[3]))
+        result = OCR_Raw_ScreenShot(img)
+        if 'Are you sure to leave' in result:
+            return True
+        else:
+            return False
 
     def Buy_Item(self, index, target_price):
         log_and_print(data['LogFilePath'], 'Buy Item:', index + 1)
@@ -379,14 +400,23 @@ class Dark_Game_Operation:
         img = pyautogui.screenshot(region=(Final_Price_Text[0], Final_Price_Text[1], Final_Price_Text[2], Final_Price_Text[3]))
         final_price = OCR_Raw_ScreenShot(img)
         # ——————————————————————————————————————————————这里要优化↓
+        # if ']' in final_price:
+        #     log_and_print(data['LogFilePath'], 'final_price:', final_price, '价格不一致')
+        #     time.sleep(2 + random.random() * 0.1)
+        #     # 键盘按下esc键
+        #     pyautogui.keyDown('esc')
+        #     time.sleep(0.05 + random.random() * 0.1)
+        #     pyautogui.keyUp('esc')
+        #     time.sleep(1)
+        #     if self.Check_Sure_to_Leave():
+        #         log_and_print(data['LogFilePath'], '{}发生未知错误，试图离开交易界面'.format(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())))
+        #         pyautogui.keyDown('esc')
+        #         time.sleep(0.05 + random.random() * 0.1)
+        #         pyautogui.keyUp('esc')
+        #     return
         if ']' in final_price:
-            log_and_print(data['LogFilePath'], 'final_price:', final_price, '价格不一致')
-            time.sleep(2 + random.random() * 0.1)
-            # 键盘按下esc键
-            pyautogui.keyDown('esc')
-            time.sleep(0.05 + random.random() * 0.1)
-            pyautogui.keyUp('esc')
-            return
+            # 把]替换为1
+            final_price = final_price.replace(']', '1')
         # ————————————————————————————————————————————————
         if str(target_price) not in final_price:
             log_and_print(data['LogFilePath'], 'final_price:', final_price, '价格不一致')
@@ -395,6 +425,12 @@ class Dark_Game_Operation:
             pyautogui.keyDown('esc')
             time.sleep(0.05 + random.random() * 0.1)
             pyautogui.keyUp('esc')
+            time.sleep(1)
+            if self.Check_Sure_to_Leave():
+                log_and_print(data['LogFilePath'], '{}发生未知错误，试图离开交易界面'.format(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())))
+                pyautogui.keyDown('esc')
+                time.sleep(0.05 + random.random() * 0.1)
+                pyautogui.keyUp('esc')
             return
         else:
             log_and_print(data['LogFilePath'], 'final_price:', final_price, '价格一致，购买中......', end='')
@@ -788,24 +824,24 @@ if __name__ == '__main__':
             'only_max_price': False,
             # 代表随机属性[0, 1]的价格上限为65，(1, 2]的价格上限为100，(2, 3]的价格上限为150，(3, ∞)的价格上限为150
             'additional_attr2max_price': {
-                1   : 65,
-                2   : 100,
-                3   : 150,
-                '*' : 150
+                1   : 85,
+                2   : 145,
+                3   : 211,
+                '*' : 211
             }
         },
         'Ring_TrueMagicalDamage': {
             'only_max_price': False,
             'additional_attr2max_price': {
-                1   : 50,
-                2   : 100,
-                '*' : 100
+                1   : 60,
+                2   : 180,
+                '*' : 180
             }
         },
         'Ring_AdditionalPhysicalDamage': {
             'only_max_price': False,
             'additional_attr2max_price': {
-                1   : 65,
+                1   : 75,
                 2   : 100,
                 3   : 150,
                 '*' : 150
@@ -821,26 +857,38 @@ if __name__ == '__main__':
         },
         'Gold_Coin_Bag': {
             'only_max_price': True,
-            'max_price': 2500
+            'max_price': 4400
         }
     }
 
 
-    # # 用于测试
+    # 用于测试
     # dark_game = Dark_Game_Operation()
-    # # dark_game.Press_Search_Button()
-    # # dark_game.Press_Buy_Button(0)
-    # # dark_game.press_Fill_All_Items_Button()
-    # # dark_game.press_Complete_Trade_Button()
-    # # img = pyautogui.screenshot()
-    # # img = np.array(img)
-    # # # r = dark_game.Get_Detailed_Prices(img)
-    # # r = dark_game.Get_Prices(img)
-    # # print(r)
-    # # print(dark_game.Get_Random_Attribute(img))
-    # ring_addition = Ring_AdditionalMagicalDamage_Func(target_prices_chart)
+    # dark_game.Press_Search_Button()
+    # dark_game.Press_Buy_Button(0)
+    # dark_game.press_Fill_All_Items_Button()
+    # dark_game.press_Complete_Trade_Button()
     # img = pyautogui.screenshot()
-    # print(ring_addition.check_filter_condition(dark_game, img))
+    # img = np.array(img)
+    # # r = dark_game.Get_Detailed_Prices(img)
+    # r = dark_game.Get_Prices(img)
+    # print(r)
+    # print(dark_game.Get_Random_Attribute(img))
+    # multiprocessing.freeze_support()
+    # manager = multiprocessing.Manager()
+    # data = manager.dict()
+    # data.update(init)
+    # queue = manager.Queue(10)
+    # time.sleep(3)
+    # # try:
+    # for i in range(10):
+    #     dark_game.Press_Search_Button()
+    #     dark_game.Buy_Item(i, i *8888)
+    #     time.sleep(1)
+
+    # # except Exception as e:
+    # #     print(e)
+    # #     a = input('按任意键结束')
     # exit()
 
     multiprocessing.freeze_support()
@@ -859,6 +907,8 @@ if __name__ == '__main__':
     parser.add_argument('--Ring_AdditionalPhysicalDamage', action='store_true')
     parser.add_argument('--Ring_TrueMagicalDamage', action='store_true')
     parser.add_argument('--Ring_AdditionalMagicalDamage', action='store_true')
+    parser.add_argument('--Surgicalkit', action='store_true')
+    parser.add_argument('--Gold_Coin_Bag', action='store_true')
     # 如果没有传入参数，使用默认参数
     args = parser.parse_args()
     if not args:
@@ -868,9 +918,11 @@ if __name__ == '__main__':
     if args.Ring_TrueMagicalDamage:
         dark_game.Dark_and_Darker_BuyItem(Ring_TrueMagicalDamage_Func(target_prices_chart))
     if args.Ring_AdditionalPhysicalDamage:
-        # & C:/Python312/python.exe c:/Users/Steven/Desktop/Darkauto/main_tesseract_ghub.py -ring_additional_physical_damage
-        # main_tesseract_ghub.py: error: unrecognized arguments: -ring_additional_physical_damage
         dark_game.Dark_and_Darker_BuyItem(Ring_AdditionalPhysicalDamage_Func(target_prices_chart))
+    if args.Surgicalkit:
+        dark_game.Dark_and_Darker_BuyItem(Surgicalkit_Func(target_prices_chart))
+    if args.Gold_Coin_Bag:
+        dark_game.Dark_and_Darker_BuyItem(Gold_Coin_Bag_Func(target_prices_chart))
     # dark_game.Dark_and_Darker_BuyItem(Ring_TrueMagicalDamage_Func(target_prices_chart))
     # dark_game.Dark_and_Darker_BuyItem(Ring_AdditionalPhysicalDamage_Func(target_prices_chart))
     # dark_game.Dark_and_Darker_BuyItem(Surgicalkit_Func(target_prices_chart))

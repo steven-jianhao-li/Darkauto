@@ -14,6 +14,7 @@
     </div>
 
     <button id="move_mouse" onclick="moveMouse()">移动鼠标</button>
+    <button id="click_mouse" onclick="clickMouse()">点击鼠标</button>
     <div id="crosshair" style="display: none;"></div>
     <div id="refresh_interval">
         <label for="slider">调整刷新间隔（毫秒）：</label>
@@ -30,6 +31,11 @@
         var refreshInterval = 500;
         var intervalId = setInterval(refreshImage, refreshInterval);
         var crosshair = document.getElementById('crosshair');
+        document.addEventListener('keydown', function(event) {
+            if (event.code === 'Space') { // 使用空格键作为触发键
+                leftclickMouse();
+            }
+        });
         document.addEventListener('DOMContentLoaded', async function() {
             // 尝试从localStorage获取Token
             var token = localStorage.getItem('token');
@@ -155,6 +161,30 @@
                 body: JSON.stringify({
                     x: clickX,
                     y: clickY
+                })
+                }) 
+            // 如果状态码为401，说明Token无效，重定向到login
+            if (response.status === 401) {
+                window.location.href = 'login';
+                return;
+            }
+
+            var result = await response.json();
+
+            if (result) {
+                crosshair.style.border = '2px solid red';
+            };
+        }
+        async function leftclickMouse() {
+            var token = localStorage.getItem('token');
+            var response = await fetch('/click_mouse', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': token, // 在请求头中添加token
+                },
+                body: JSON.stringify({
+                    opcode: 1
                 })
                 }) 
             // 如果状态码为401，说明Token无效，重定向到login

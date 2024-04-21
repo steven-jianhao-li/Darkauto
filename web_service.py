@@ -13,6 +13,7 @@ import re
 import time
 import hashlib
 import pyautogui
+from functools import wraps
 
 from Functions_IO import log_and_print
 # from main_tesseract_ghub import LOGITECH
@@ -105,6 +106,10 @@ class user_certification:
         if not os.path.exists(self.TOKENS_FILE):
             with open(self.TOKENS_FILE, mode='w', newline='') as file:
                 pass
+        # 删除过期的token
+        self.delete_expired_tokens()
+
+
 
     def generate_token(self):
         token = str(uuid.uuid4())
@@ -155,7 +160,22 @@ class user_certification:
             writer.writeheader()
             writer.writerows(temp_rows)
 
+class Mouse_Control:
+    def __init__(self):
+        pass
 
+
+
+    def move_mouse(self, x, y):
+        pyautogui.moveTo(x, y)
+    
+    def click_mouse(self, opcode):
+        if opcode == 1:
+            pyautogui.click(button='left')
+        elif opcode == 2:
+            pyautogui.click(button='right')
+        elif opcode == 3:
+            pyautogui.click(button='middle')
 
 def Open_Web_Service(Data_input):
     app = Flask(__name__, static_folder='HTML')
@@ -166,6 +186,20 @@ def Open_Web_Service(Data_input):
     print('Web Service is running...')
     target_log = Data_input['LogFilePath']
     uc = user_certification()
+    mouse_control = Mouse_Control()
+
+    def token_required(f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            token = request.headers.get('Authorization')
+            if not token:
+                return jsonify({'error': 'Missing token'}), 401
+            if not uc.validate_token(token):
+                return jsonify({'error': 'Invalid token'}), 401
+            uc.delete_expired_tokens()
+            uc.update_token_expiry(token)
+            return f(*args, **kwargs)
+        return wrapper
 
     @app.route('/buy_history', methods=['GET'])
     def log():
@@ -225,28 +259,30 @@ def Open_Web_Service(Data_input):
         return send_file(img_io, mimetype='image/png')
     
     @app.route('/move_mouse', methods=['POST'])
+    @token_required
     def move_mouse():
-        # 从请求头中获取token
-        token = request.headers.get('Authorization')
-        if not token:
-            return jsonify({'error': 'Missing token'}), 401
-
-        # 验证token
-        if not uc.validate_token(token):
-            return jsonify({'error': 'Invalid token'}), 401
-        
-        # 删除过期的token
-        uc.delete_expired_tokens()
-
-        # 更新token的过期时间
-        uc.update_token_expiry(token)
-
         # 获取前端传来的json数据
         data = request.get_data()
         data = json.loads(data)
         # 移动鼠标
-        pyautogui.moveTo(data['x'], data['y'])
+        mouse_control.move_mouse(data['x'], data['y'])
         return jsonify({'message': 'Mouse moved successfully'}), 200
+
+    @app.route('/click_mouse', methods=['POST'])
+    @token_required
+    def click_mouse():
+        # 获取前端传来的json数据
+        data = request.get_data()
+        data = json.loads(data)
+        # opcode为1表示左键单击，为2表示右键单击，为3表示中键单击
+        if data['opcode'] == 1:
+            mouse_control.click_mouse(1)
+        elif data['opcode'] == 2:
+            mouse_control.click_mouse(2)
+        elif data['opcode'] == 3:
+            mouse_control.click_mouse(3)
+        return jsonify({'message': 'Mouse clicked successfully'}), 200
+
 
     @app.route('/')
     def index():

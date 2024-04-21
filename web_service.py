@@ -305,7 +305,7 @@ def Open_Web_Service(Data_input):
         data_hashed_password = data['hashed_password']
 
         # 读取明文密码文件Secret
-        with open('Secret', 'r') as f:
+        with open(File_Dir + '/Secret.txt', 'r') as f:
             Secret = f.read()
         
 

@@ -834,8 +834,8 @@ if __name__ == '__main__':
             'only_max_price': False,
             'additional_attr2max_price': {
                 1   : 60,
-                2   : 180,
-                '*' : 180
+                2   : 150,
+                '*' : 150
             }
         },
         'Ring_AdditionalPhysicalDamage': {

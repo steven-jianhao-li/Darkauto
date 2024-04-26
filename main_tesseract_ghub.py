@@ -17,6 +17,8 @@ import pynput # 调用dll文件
 # 安装完成以后配置环境变量，在计算机-->属性-->高级系统设置-->环境变量-->系统变量path
 import pytesseract
 
+from Class.Class_IO_controller import IO_controller
+from Class.Class_LOGITECH import LOGITECH
 from web_service import Open_Web_Service
 from Functions_IO import log_and_print, ringing
 from Functions_OCR import OCR_image, OCR_Raw_ScreenShot
@@ -67,7 +69,6 @@ def microsecond_sleep(sleep_time):
     while time.perf_counter() < end_time:
         pass
 
-
 # 检测剩余购买次数
 def check_buy_times():
     """ 检测剩余购买次数 """
@@ -77,197 +78,7 @@ def check_buy_times():
     else:
         data['pause_flag'] = True
         log_and_print(data['LogFilePath'], '已购买足够次数，暂停...')
-
-class PID:
-    """PID"""
-    def __init__(self, P=0.2, I=0, D=0):
-        self.kp = P # 比例 
-        self.ki = I # 积分
-        self.kd = D # 微分
-        self.uPrevious = 0 # 上一次控制量
-        self.uCurent = 0 # 这一次控制量
-        self.setValue = 0 # 目标值
-        self.lastErr = 0 # 上一次差值
-        self.errSum = 0 # 所有差值的累加
-        
-    def pidPosition(self, setValue, curValue):
-        """位置式 PID 输出控制量"""
-        self.setValue = setValue # 更新目标值
-        err = self.setValue - curValue # 计算差值, 作为比例项
-        dErr = err - self.lastErr # 计算近两次的差值, 作为微分项
-        self.errSum += err # 累加这一次差值,作为积分项
-        outPID = (self.kp * err) + (self.ki * self.errSum) + (self.kd * dErr) # PID
-        self.lastErr = err # 保存这一次差值,作为下一次的上一次差值
-        return outPID # 输出
-    
-    def pidIncrease(self, setValue, curValue):
-        """增量式 PID 输出控制量的差值"""
-        self.uCurent = self.pidPosition(setValue, curValue) # 计算位置式
-        outPID = self.uCurent - self.uPrevious # 计算差值 
-        self.uPrevious = self.uCurent # 保存这一次输出量
-        return outPID # 输出
-
-class LOGITECH:
-    """罗技动态链接库"""
-    def __init__(self) -> None:
-        try:
-            file_path = os.path.abspath(os.path.dirname(__file__)) # 当前路径
-            self.dll = ctypes.CDLL(f'{file_path}/ghub_device.dll') # 打开路径文件
-            self.state = (self.dll.device_open() == 1) # 启动, 并返回是否成功
-            self.WAIT_TIME = 0.5 # 等待时间
-            self.MAX_RANDOM_SLEEP_TIME = 0.1 # 最大随机等待时间
-            if not self.state:
-                log_and_print(data['LogFilePath'], '错误, 未找到GHUB或LGS驱动程序')
-        except FileNotFoundError:
-            log_and_print(data['LogFilePath'], f'错误, 找不到DLL文件')
-
-    def mouse_down(self, code):
-        """ 鼠标按下 code: 左 中 右 """
-        if not self.state:
-            return
-        if code == '左':
-            code = 1
-        elif code == '中':
-            code = 2
-        elif code == '右':
-            code = 3
-        else: # 默认
-            code = 1 
-        self.dll.mouse_down(code)
-
-    def mouse_up(self, code):
-        """ 鼠标松开 code: 左 中 右 """
-        if not self.state:
-            return
-        if code == '左':
-            code = 1
-        elif code == '中':
-            code = 2
-        elif code == '右':
-            code = 3
-        else: # 默认
-            code = 1 
-        self.dll.mouse_up(code)
-    
-    def mouse_click(self, code, wait_time=0):
-        """ 鼠标点击 code: 左 中 右 """
-        if wait_time != 0: # 如果等待时间不是0
-            time.sleep(wait_time) # 延时时间
-        if not self.state:
-            return
-        if code == '左':
-            code = 1
-        elif code == '中':
-            code = 2
-        elif code == '右':
-            code = 3
-        else: # 默认
-            code = 1 
-        self.dll.mouse_down(code)
-        time.sleep(random.uniform(0, self.MAX_RANDOM_SLEEP_TIME)) # 延时时间
-        self.dll.mouse_up(code)
-
-    def mouse_left_click(self):
-        """ 鼠标左键点击 """
-        if not self.state:
-            return
-        self.dll.mouse_down(1)
-        time.sleep(random.uniform(0, self.MAX_RANDOM_SLEEP_TIME))
-        self.dll.mouse_up(1)
-        
-    def mouse_move(self, end_xy, min_xy=1, min_time=0.01):
-        """
-        利用pid循环控制鼠标直到重合坐标，最多循环100次
-        相当于最多保持移动1秒，若在1秒内未达到指定坐标则退出，不执行点击操作
-        :param end_xy: 目标坐标
-        :param min_xy: 最小移动量
-        :param min_time: 移动时的时间间隔
-        :return: 是否到达目标坐标
-        """
-        if not self.state:
-            return
-        end_x, end_y = end_xy # 解码目标坐标
-        pid_x = PID() # 创建pid对象
-        pid_y = PID()
-
-        for i in range(150):
-            time.sleep(min_time) # 等待时间
-            new_x, new_y = pyautogui.position() # 获取当前鼠标位置
-
-            move_x = pid_x.pidPosition(end_x, new_x) # 经过pid计算鼠标运动量
-            move_y = pid_y.pidPosition(end_y, new_y)
-
-            # log_and_print(data['LogFilePath'], f'x={new_x}, y={new_y}, xd={move_x}, yd={move_y}')
-            # 如果近似重合就退出循环
-            if abs(end_x - new_x) < 2 and abs(end_y - new_y) < 2:
-                return True
-            
-            if move_x > 0 and move_x < (min_xy): # 限制正最小值
-                move_x = (min_xy)
-            elif move_x < 0 and move_x > -(min_xy): # 限制负最小值
-                move_x = -(min_xy)
-            else:
-                move_x = int(move_x) # 需要输入整数,小数会报错
-
-            if move_y > 0 and move_y < (min_xy):
-                move_y = (min_xy)
-            elif move_y < 0 and move_y > -(min_xy):
-                move_y = -(min_xy)
-            else:
-                move_y = int(move_y)
-
-            self.dll.moveR(move_x, move_y, True) # 貌似有第三个参数,但是没试出来什么用
-        return False
-    
-    def keyboard_down(self, code):
-        """ 键盘按下 code: 键盘按键 """
-        if not self.state:
-            return
-        self.dll.key_down(code)
-
-    def keyboard_up(self, code):
-        """ 键盘松开 code: 键盘按键 """
-        if not self.state:
-            return
-        self.dll.key_up(code)
-    
-    def keyboard_click(self, code):
-        """ 键盘点击 code: 键盘按键 """
-        if not self.state:
-            return
-        self.keyboard_down(code)
-        time.sleep(random.uniform(0, self.MAX_RANDOM_SLEEP_TIME))
-        self.keyboard_up(code)
-    
-class IO_controller:
-    def __init__(self, min_time=0.0075):
-        self.min_time = min_time
-        self.logitech = LOGITECH()
-
-    def left_click(self, wait_time=0):
-        """鼠标左键点击"""
-        self.logitech.mouse_click('左', wait_time=wait_time)
-
-    def move_to_left_click(self, x, y, min_time):
-        """鼠标移动到指定位置并点击"""
-        move_flag = self.logitech.mouse_move((x, y), min_time=min_time)
-        if move_flag:   # 如果鼠标移动到指定位置，才会触发点击操作
-            self.logitech.mouse_left_click()
-        else:
-            print("时间", time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()), "鼠标移动失败，未点击")
-        
-    def rand_move_to_left_click(self, x, y, rand_x, rand_y):
-        """
-        鼠标随机移动到指定位置附近并点击，范围是矩形
-        x, y: 目标位置
-        rand_x, rand_y: 随机范围
-        """
-        x += random.randint(-rand_x, rand_x)
-        y += random.randint(-rand_y, rand_y)
-        self.move_to_left_click(x, y, self.min_time)
-
-    def keyboard_press(self, code):
-        self.logitech.keyboard_click(code)
+   
 
 class Dark_Game_Operation:
     def __init__(self) -> None:

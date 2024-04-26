@@ -14,7 +14,7 @@ import time
 import hashlib
 import pyautogui
 from functools import wraps
-
+from Class.Class_IO_controller import IO_controller
 from Functions_IO import log_and_print
 # from main_tesseract_ghub import LOGITECH
 
@@ -160,22 +160,20 @@ class user_certification:
             writer.writeheader()
             writer.writerows(temp_rows)
 
-class Mouse_Control:
+class WebService_Mouse_Control:
     def __init__(self):
-        pass
-
-
+        self.io = IO_controller()
 
     def move_mouse(self, x, y):
-        pyautogui.moveTo(x, y)
+        self.io.move_to(x, y)
     
     def click_mouse(self, opcode):
         if opcode == 1:
-            pyautogui.click(button='left')
+            self.io.left_click()
         elif opcode == 2:
-            pyautogui.click(button='right')
+            self.io.right_click()
         elif opcode == 3:
-            pyautogui.click(button='middle')
+            self.io.mid_click()
 
 def Open_Web_Service(Data_input):
     app = Flask(__name__, static_folder='HTML')
@@ -186,7 +184,7 @@ def Open_Web_Service(Data_input):
     print('Web Service is running...')
     target_log = Data_input['LogFilePath']
     uc = user_certification()
-    mouse_control = Mouse_Control()
+    mouse_control = WebService_Mouse_Control()
 
     def token_required(f):
         @wraps(f)

@@ -250,6 +250,9 @@ def Open_Web_Service(Data_input):
     def get_screen_shot():
         # 获取当前屏幕截图
         img = pyautogui.screenshot()
+        # 对图片进行压缩，不改变分辨率
+        # img.thumbnail((img.width // 2, img.height // 2))
+
         # 转换为可发送的格式
         img_io = BytesIO()
         img.save(img_io, 'PNG')

@@ -9,12 +9,13 @@
     <!-- <script src="JS/UserControl.js"></script> -->
 </head>
 <body>
-    <div id="screen">
-        <img id="screen_shot" src="/get_screen_shot" alt="屏幕截图" onload="imageLoaded()">
-    </div>
+    <button id="returnhome" onclick="returnHome()">返回主页</button>
 
     <button id="move_mouse" onclick="moveMouse()">移动鼠标</button>
     <button id="click_mouse" onclick="leftclickMouse()">点击鼠标</button>
+    <div id="screen">
+        <img id="screen_shot" src="/get_screen_shot" alt="屏幕截图" onload="imageLoaded()">
+    </div>
     <div id="crosshair" style="display: none;"></div>
     <div id="refresh_interval">
         <label for="slider">调整刷新间隔（毫秒）：</label>
@@ -31,6 +32,10 @@
         var refreshInterval = 500;
         var intervalId = setInterval(refreshImage, refreshInterval);
         var crosshair = document.getElementById('crosshair');
+
+        function returnHome() {
+            window.location.href = '/';
+        }
         document.addEventListener('keydown', function(event) {
             if (event.code === 'Space') { // 使用空格键作为触发键
                 leftclickMouse();

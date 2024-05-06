@@ -160,24 +160,36 @@ class user_certification:
             writer.writeheader()
             writer.writerows(temp_rows)
 
-class WebService_Mouse_Control:
-    def __init__(self):
-        self.io = IO_controller()
 
+# class WebService_Mouse_Control:
+#     def __init__(self):
+#         self.io = IO_controller()
+
+#     def move_mouse(self, x, y):
+#         self.io.move_to(x, y)
+    
+#     def click_mouse(self, opcode):
+#         if opcode == 1:
+#             self.io.left_click()
+#         elif opcode == 2:
+#             self.io.right_click()
+#         elif opcode == 3:
+#             self.io.mid_click()
+
+class WebService_Mouse_Control:
     def move_mouse(self, x, y):
-        self.io.move_to(x, y)
+        pyautogui.moveTo(x, y)
     
     def click_mouse(self, opcode):
         if opcode == 1:
-            self.io.left_click()
+            pyautogui.click(button='left')
         elif opcode == 2:
-            self.io.right_click()
+            pyautogui.click(button='right')
         elif opcode == 3:
-            self.io.mid_click()
+            pyautogui.click(button='middle')
 
 def Open_Web_Service(Data_input):
     app = Flask(__name__, static_folder='HTML')
-    # url_for('static', filename='script.js')
     # 获取 Werkzeug 的日志记录器并设置其级别为错误
     werkzeug_logger = logging.getLogger('werkzeug')
     werkzeug_logger.setLevel(logging.ERROR)
@@ -259,6 +271,20 @@ def Open_Web_Service(Data_input):
         img_io.seek(0)
         return send_file(img_io, mimetype='image/png')
     
+    @app.route('/get_pause_flag', methods=['GET'])
+    def get_pause_flag():
+        return jsonify(Data_input['pause_flag'])
+    
+    @app.route('/set_pause_flag', methods=['POST'])
+    def set_pause_flag():
+        data = request.get_data()
+        data = json.loads(data)
+        if data['pause_flag'] == "True":
+            Data_input['pause_flag'] = True
+        elif data['pause_flag'] == "False":
+            Data_input['pause_flag'] = False
+        return jsonify({'message': 'Pause flag set successfully'}), 200
+
     @app.route('/move_mouse', methods=['POST'])
     @token_required
     def move_mouse():
@@ -291,12 +317,14 @@ def Open_Web_Service(Data_input):
     
     @app.route('/usercontrol')
     def usercontrol():
-        UserControl_Css_url = url_for('static', filename='CSS/UserControl.css')
+        url_for('static', filename='CSS/UserControl.css')
+        url_for('static', filename='JS/UserControl.js')
         return send_from_directory(File_Dir + '/HTML', 'UserControl.html')
     
     @app.route('/login')
     def login():
-        login_Css_url = url_for('static', filename='CSS/Login.css')
+        url_for('static', filename='CSS/Login.css')
+        # url_for('static', filename='JS/Login.js')
         return send_from_directory(File_Dir + '/HTML', 'Login.html')
 
     @app.route('/loginrequest', methods=['POST'])

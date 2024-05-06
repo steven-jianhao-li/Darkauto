@@ -49,6 +49,33 @@
     <button class="button2" onclick="window.location.href='/buy_history'">Buy_History</button>
     <button class="button3" onclick="window.location.href='/left_buy_times'">Left_Buy_Times</button>
     
+    <!-- 新增一个滑动开关，用于展示pause_flag的状态，调用/get_pause_flag和/set_pause_flag接口 -->
+    <p style="display: inline-block;">Pause_Flag：</p>
+    <label class="switch">
+        <input type="checkbox" id="pause_flag" onclick="setPauseFlag()">
+        <span class="slider round"></span>
+    </label>
+    <script>
+        // 使用fetch函数，调用'/get_pause_flag'接口
+        fetch('/get_pause_flag')
+            .then(response => response.json())
+            .then(data => {
+                // 将返回值（布尔值）显示在滑动开关中
+                document.getElementById('pause_flag').checked = data;
+            });
+        // 使用fetch函数，调用'/set_pause_flag'接口，是post请求，请求Ture或False
+        async function setPauseFlag() {
+            await fetch('/set_pause_flag', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    pause_flag: document.getElementById('pause_flag').checked
+                })
+            });
+        }
+    </script>
     <!-- 新增一个输出框，用来显示'/buy_history'接口的返回值 -->
     <!-- 加上以下输出框的名字，方便用户理解 -->
     <p>1. 购买记录：</p>
@@ -177,8 +204,32 @@
 
             });
     </script>
-    <!-- 新增按钮，点击跳转至/usercontrol -->
-    <button onclick="window.location.href='/usercontrol'">User Control</button>
+    <!-- 新增按钮，如果本地有cookie，点击跳转至/usercontrol，否则跳转至login -->
+    <button onclick="jumpToUserControl()">User_Control</button>
+    <script>
+        function jumpToUserControl() {
+            // 获取本地的token
+            var token = localStorage.getItem('token');
+            // 验证token是否有效，如果有效跳转至/usercontrol，否则跳转至login
+            // /verifytoken接口
+            fetch('/verifytoken', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    token: token
+                })
+            })
+                .then(response => {
+                    if (response.status === 200) {
+                        window.location.href = '/usercontrol';
+                    } else {
+                        window.location.href = '/login';
+                    }
+                });
+        }
+    </script>
     <p> </p>
 
 </body>

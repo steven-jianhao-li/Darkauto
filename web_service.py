@@ -161,32 +161,32 @@ class user_certification:
             writer.writerows(temp_rows)
 
 
-# class WebService_Mouse_Control:
-#     def __init__(self):
-#         self.io = IO_controller()
-
-#     def move_mouse(self, x, y):
-#         self.io.move_to(x, y)
-    
-#     def click_mouse(self, opcode):
-#         if opcode == 1:
-#             self.io.left_click()
-#         elif opcode == 2:
-#             self.io.right_click()
-#         elif opcode == 3:
-#             self.io.mid_click()
-
 class WebService_Mouse_Control:
+    def __init__(self):
+        self.io = IO_controller()
+
     def move_mouse(self, x, y):
-        pyautogui.moveTo(x, y)
+        self.io.move_to(x, y)
     
     def click_mouse(self, opcode):
         if opcode == 1:
-            pyautogui.click(button='left')
+            self.io.left_click()
         elif opcode == 2:
-            pyautogui.click(button='right')
+            self.io.right_click()
         elif opcode == 3:
-            pyautogui.click(button='middle')
+            self.io.mid_click()
+
+# class WebService_Mouse_Control:
+#     def move_mouse(self, x, y):
+#         pyautogui.moveTo(x, y)
+    
+#     def click_mouse(self, opcode):
+#         if opcode == 1:
+#             pyautogui.click(button='left')
+#         elif opcode == 2:
+#             pyautogui.click(button='right')
+#         elif opcode == 3:
+#             pyautogui.click(button='middle')
 
 def Open_Web_Service(Data_input):
     app = Flask(__name__, static_folder='HTML')

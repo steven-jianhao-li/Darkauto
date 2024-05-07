@@ -9,7 +9,9 @@
     <script src="HTML/JS/UserControl.js"></script>
 </head>
 <body>
-
+    <div id="screen">
+        <img id="screen_shot" src="/get_screen_shot" alt="屏幕截图" onload="imageLoaded()" onclick="screen_onclick(event)">
+    </div>
     <div id="toolbar">
         <button id="returnhome" onclick="returnHome()">返回主页</button>
         <button id="move_mouse" onclick="moveMouse()">移动鼠标</button>
@@ -32,9 +34,7 @@
         </div>
     </div>
     
-    <div id="screen">
-        <img id="screen_shot" src="/get_screen_shot" alt="屏幕截图" onload="imageLoaded()" onclick="screen_onclick(event)">
-    </div>
+
 
     <div id="crosshair" style="display: none;"></div>
 

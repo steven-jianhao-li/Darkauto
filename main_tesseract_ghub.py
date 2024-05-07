@@ -31,10 +31,12 @@ first_Buy_buttons = (2389 - 50 / 2, 477 - 12 / 2, 50, 12)        # 第一个Buy�
 Buy_buttons_decrease_y = 86.7
 Fill_All_Items_button = (1147, 986, 250, 65)
 Complete_Trade_button = (1151, 1101, 250, 52)
+Dungeon_Rotated_OK_button = (1227, 816, 112, 23)
 # 静态文本位置
 Prices_Text = (1986, 441, 93, 850)
 Detailed_Prices_Text = (2136, 464, 130, 812)
 Random_Attribute_Text = (1450, 441, 112, 850)
+Dungeon_Rotated_Text = (1035, 600, 487, 140)
 # Final_Price = (1383, 877, 168, 37) # 这个是小字，不好识别
 Final_Price_Text = (255, 695, 275, 69)
 Item_Name_Chosen_Text = (65, 263, 200, 24)
@@ -48,15 +50,19 @@ Item_Sold_Text = (986, 177, 590, 58)
 Buy_Success_Text = (908, 596, 744, 152)
 Sure_to_Leave_Text = (1067, 617, 423, 110)
 
-# 初始化数据
+
 # 当前python文件的路径
 File_Path = os.path.abspath(os.path.dirname(__file__))
+# 初始化数据 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 init = {
     'pause_flag': False,
     'end_flag': False,
-    'buy_times': 10,
+    'buy_times': 500,
     'LogFilePath': '{0}/log/{1}.txt'.format(File_Path, time.strftime('%Y_%m_%d %H_%M_%S', time.localtime()))
 }
+# 功能开关
+FuncFlag_check_dungeon_rotated = False
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 def microsecond_sleep(sleep_time):
     """微秒等待
@@ -113,6 +119,12 @@ class Dark_Game_Operation:
         rand_y = int(Complete_Trade_button[3] / 2)
         self.io.rand_move_to_left_click(center_x, center_y, rand_x, rand_y)
 
+    def press_Dungeon_Rotated_OK_Button(self):
+        center_x = int(Dungeon_Rotated_OK_button[0] + Dungeon_Rotated_OK_button[2] / 2)
+        center_y = int(Dungeon_Rotated_OK_button[1] + Dungeon_Rotated_OK_button[3] / 2)
+        rand_x = int(Dungeon_Rotated_OK_button[2] / 2)
+        rand_y = int(Dungeon_Rotated_OK_button[3] / 2)
+        self.io.rand_move_to_left_click(center_x, center_y, rand_x, rand_y)
         
     def Get_Prices(self, screen_shot_img):
         """
@@ -196,6 +208,14 @@ class Dark_Game_Operation:
         img = pyautogui.screenshot(region=(Sure_to_Leave_Text[0], Sure_to_Leave_Text[1], Sure_to_Leave_Text[2], Sure_to_Leave_Text[3]))
         result = OCR_Raw_ScreenShot(img)
         if 'Are you sure to leave' in result:
+            return True
+        else:
+            return False
+
+    def Check_Dungeon_Rotated(self):
+        img = pyautogui.screenshot(region=(Dungeon_Rotated_Text[0], Dungeon_Rotated_Text[1], Dungeon_Rotated_Text[2], Dungeon_Rotated_Text[3]))
+        result = OCR_Raw_ScreenShot(img)
+        if 'Rotated' in result:
             return True
         else:
             return False
@@ -409,7 +429,6 @@ class BaseItemFunc:
                         check_buy_times()
                 except Exception as e:
                     log_and_print(data['LogFilePath'], e)
-                game_op.Press_Search_Button()
                 return True
         return False
 
@@ -431,7 +450,6 @@ class BaseItemFunc:
                     check_buy_times()
             except Exception as e:
                 log_and_print(data['LogFilePath'], e)
-            game_op.Press_Search_Button()
             return True
         return False
         
@@ -502,6 +520,7 @@ class Dark_and_Darker_Appliaction:
                     self.game_op.Press_Search_Button()
                     time.sleep(1 + random.random() * 0.5)
                     old_prices = []
+                    check_dungeon_rotated_times = 0
                     while True:
                         if data['end_flag']:
                             return
@@ -510,6 +529,14 @@ class Dark_and_Darker_Appliaction:
                         if 'Dark and Darker' not in pyautogui.getActiveWindow().title:
                             log_and_print(data['LogFilePath'], 'Dark and Darker is not running...')
                             break
+                        if check_dungeon_rotated_times > 10 and FuncFlag_check_dungeon_rotated:
+                            check_dungeon_rotated_times = 0
+                            if self.game_op.Check_Dungeon_Rotated():
+                                self.game_op.press_Dungeon_Rotated_OK_Button()
+                                time.sleep(0.15 + random.random() * 0.15)
+                                self.game_op.Press_Search_Button()
+                                continue
+                        check_dungeon_rotated_times += 1
                         time.sleep(0.05 + random.random() * 0.05)
                         prices = self.game_op.Get_Prices()
                         details_prices = self.game_op.Get_Detailed_Prices()
@@ -564,9 +591,10 @@ class Dark_and_Darker_Appliaction:
                     continue
                 else:
                     self.game_op.Press_Search_Button()
-                    time.sleep(1 + random.random() * 0.5)
+                    time.sleep(1)
                     old_prices = []
                     old_rand_attrs = []
+                    check_dungeon_rotated_times = 0
                     while True:
                         if data['end_flag']:
                             return
@@ -576,6 +604,13 @@ class Dark_and_Darker_Appliaction:
                         if 'Dark and Darker' not in pyautogui.getActiveWindow().title:
                             log_and_print(data['LogFilePath'], 'Dark and Darker is not running...')
                             break
+                        if check_dungeon_rotated_times > 10 and FuncFlag_check_dungeon_rotated:
+                            check_dungeon_rotated_times = 0
+                            if self.game_op.Check_Dungeon_Rotated():
+                                self.game_op.press_Dungeon_Rotated_OK_Button()
+                                time.sleep(0.15 + random.random() * 0.15)
+                                self.game_op.Press_Search_Button()
+                                continue
                         time.sleep(0.01 + random.random() * 0.02)
                         screen_shot_img = pyautogui.screenshot()
                         screen_shot_img = np.array(screen_shot_img)
@@ -644,9 +679,9 @@ if __name__ == '__main__':
         'Ring_TrueMagicalDamage': {
             'only_max_price': False,
             'additional_attr2max_price': {
-                1   : 60,
-                2   : 150,
-                '*' : 150
+                1   : 70,
+                2   : 165,
+                '*' : 165
             }
         },
         'Ring_AdditionalPhysicalDamage': {

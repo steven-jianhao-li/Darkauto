@@ -1,6 +1,5 @@
 # 用于读取log文件夹下的日志文件，加以分析后，提供给前端页面
 # 通过flask框架提供web服务
-
 import csv
 from datetime import datetime, timedelta
 from io import BytesIO
@@ -198,6 +197,7 @@ def Open_Web_Service(Data_input):
     uc = user_certification()
     mouse_control = WebService_Mouse_Control()
 
+
     def token_required(f):
         @wraps(f)
         def wrapper(*args, **kwargs):
@@ -271,19 +271,23 @@ def Open_Web_Service(Data_input):
         img_io.seek(0)
         return send_file(img_io, mimetype='image/png')
     
+    
     @app.route('/get_pause_flag', methods=['GET'])
     def get_pause_flag():
-        return jsonify(Data_input['pause_flag'])
+        return jsonify({"pause_flag": Data_input['pause_flag']}), 200
     
     @app.route('/set_pause_flag', methods=['POST'])
+    @token_required
     def set_pause_flag():
         data = request.get_data()
         data = json.loads(data)
         if data['pause_flag'] == "True":
             Data_input['pause_flag'] = True
+            return jsonify({'message': 'Pause flag set True successfully'}), 200
         elif data['pause_flag'] == "False":
             Data_input['pause_flag'] = False
-        return jsonify({'message': 'Pause flag set successfully'}), 200
+            return jsonify({'message': 'Pause flag set False successfully'}), 200
+        return jsonify({'error': 'Invalid pause flag'}), 400
 
     @app.route('/move_mouse', methods=['POST'])
     @token_required
@@ -317,14 +321,10 @@ def Open_Web_Service(Data_input):
     
     @app.route('/usercontrol')
     def usercontrol():
-        url_for('static', filename='CSS/UserControl.css')
-        url_for('static', filename='JS/UserControl.js')
         return send_from_directory(File_Dir + '/HTML', 'UserControl.html')
     
     @app.route('/login')
     def login():
-        url_for('static', filename='CSS/Login.css')
-        # url_for('static', filename='JS/Login.js')
         return send_from_directory(File_Dir + '/HTML', 'Login.html')
 
     @app.route('/loginrequest', methods=['POST'])
@@ -370,9 +370,7 @@ def Open_Web_Service(Data_input):
     
     @app.route('/verifytoken', methods=['POST'])
     def verifytoken():
-        # 获取前端传来的json数据
-        data = request.get_json()
-        token = data['token']
+        token = request.headers.get('Authorization')
         # 删除过期的token
         uc.delete_expired_tokens()
         if uc.validate_token(token):
@@ -383,6 +381,12 @@ def Open_Web_Service(Data_input):
     # logitech = LOGITECH()
     # 启动web服务，默认端口为5000，可通过host参数指定ip地址
     app.run(host='0.0.0.0', port=5000, debug=False)
+        # with app.app_context():
+    url_for('static', filename='CSS/Login.css')
+    # url_for('static', filename='JS/Login.js')
+    url_for('static', filename='CSS/UserControl.css')
+    url_for('static', filename='CSS/Common.css')
+    url_for('static', filename='JS/UserControl.js')
 
 if __name__ == '__main__':
     Data_input = {

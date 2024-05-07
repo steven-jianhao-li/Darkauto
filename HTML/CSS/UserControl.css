@@ -1,17 +1,16 @@
+/* ----------- */
 #crosshair {
-    position: absolute; /* 使得伪元素的定位基于此元素 */
+    position: absolute; /* 使得鼠标位置相对于整个页面定位 */
     display: none;
     width: 0;
     height: 0;
 }
-
 #crosshair::before, #crosshair::after {
     content: ''; /* 伪元素需要content属性 */
     position: absolute; /* 使得伪元素相对于父元素定位 */
     background-color: red; /* 十字线的颜色 */
     transform: translate(-50%, -50%); /* 使得十字线的中心点在鼠标位置 */
 }
-
 #crosshair::before {
     /* 水平线 */
     top: 50%;       
@@ -19,7 +18,6 @@
     width: 30px; /* 十字线的长度 */
     height: 4px; /* 十字线的厚度 */
 }
-
 #crosshair::after {
     /* 垂直线 */
     left: 50%;
@@ -28,15 +26,17 @@
     height: 30px; /* 十字线的长度 */
 }
 
+/* ----------- */
 #toolbar {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: left;
+    /* Added code for toolbar layout */
+    display: flex; /* Use flexbox for layout */
+    flex-direction: row; /* Arrange items in a row */
+    align-items: center; /* Center items vertically */
+    justify-content: left; /* Align items to the left */
     background-color: #f8f8f8; /* 添加背景颜色 */
     border: 1px solid #ddd; /* 添加边框 */
-    border-radius: 5px; /* 添加边框半径 */
-    padding: 10px; /* 添加内边距 */
+    border-radius: 10px; /* 添加边框弧度 */
+    padding: 5px; /* 添加内边距 */
     font-size: 14px; /* 改变字体大小 */
     color: #333; /* 改变字体颜色 */
 }
@@ -47,16 +47,35 @@
     margin-right: 20px;
 }
 
-
+/* ----------- */
 #refresh_interval {
-    background-color: #f8f8f8; /* 添加背景颜色 */
+    background-color: #e9e7e7; /* 添加背景颜色 */
     border: 1px solid #ddd; /* 添加边框 */
     border-radius: 5px; /* 添加边框半径 */
     padding: 10px; /* 添加内边距 */
     font-size: large; /* 改变字体大小 */
     color: #333; /* 改变字体颜色 */
 }
-
 #refresh_interval * {
+    background-color: #e9e7e7; /* 添加背景颜色 */
+}
+
+/* ----------- */
+#pause_flag_checkbox {
+    display: flex; /* Use flexbox for layout */
+    flex-direction: row; /* Arrange items in a row */
+    align-items: center; /* Center items vertically */
+    justify-content: left; /* Align items to the left */
     background-color: #f8f8f8; /* 添加背景颜色 */
+    border: 1px solid #ddd; /* 添加边框 */
+    border-radius: 10px; /* 添加边框弧度 */
+    padding: 5px; /* 添加内边距 */
+    font-size: large; /* 改变字体大小 */
+    color: #333; /* 改变字体颜色 */
+}
+#pause_flag_checkbox * {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center; /* Change this from top to center */
+    justify-content: left;
 }

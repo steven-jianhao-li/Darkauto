@@ -2,43 +2,57 @@
 
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>用户控制</title>
     <meta charset="utf-8">
     <link rel="stylesheet" type="text/css" href="HTML/CSS/UserControl.css">
+    <link rel="stylesheet" type="text/css" href="HTML/CSS/Common.css">
     <script src="HTML/JS/UserControl.js"></script>
 </head>
-<body>
 
+<body>
+    <div id="screen">
+        <img id="screen_shot" src="/get_screen_shot" alt="屏幕截图" onload="imageLoaded()" onclick="screen_onclick(event)">
+    </div>
     <div id="toolbar">
+
         <button id="returnhome" onclick="returnHome()">返回主页</button>
         <button id="move_mouse" onclick="moveMouse()">移动鼠标</button>
         <button id="click_mouse" onclick="leftclickMouse()">点击鼠标</button>
-        
+
         <div id="refresh_interval">
             <label for="slider">调整刷新间隔（毫秒）：</label>
-            <input type="range" id="slider" min="300" max="3000" value="500" oninput="adjustInterval(this.value)">
+            <input type="range" id="slider" min="300" max="3000" value="1000" oninput="adjustInterval(this.value)">
             <label for="input">或直接输入：</label>
-            <input type="number" id="input" min="300" max="3000" value="500">
+            <input type="number" id="input" min="300" max="3000" value="1000">
             <button id="confirmInterval" onclick="confirmInterval()">确认</button>
         </div>
-        <div id="control">
+
+        <div id="pause_flag_checkbox">
+            <div>暂停：</div>
+            <div class="checkbox">
+                <div class="inner" id="inner" onclick="checkboxinnerclick()">
+                    <div class="toggle" id="toggle"></div>
+                </div>
+            </div>
+        </div>
+        <!-- <div id="control">
             <button id="shutdown" onclick="shutdown()">关机</button>
             <button id="restart" onclick="restart()">重启</button>
             <button id="lock" onclick="lock()">锁屏</button>
             <button id="unlock" onclick="unlock()">解锁</button>
             <button id="sleep" onclick="sleep()">休眠</button>
             <button id="wake" onclick="wake()">唤醒</button>
-        </div>
+        </div> -->
+
     </div>
-    
-    <div id="screen">
-        <img id="screen_shot" src="/get_screen_shot" alt="屏幕截图" onload="imageLoaded()" onclick="screen_onclick(event)">
-    </div>
+
+
 
     <div id="crosshair" style="display: none;"></div>
 
-    
+
 
 
 </html>
